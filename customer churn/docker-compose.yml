@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  churn-app:
+    build: .
+    container_name: customer_churn_platform
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./churn.db
+    volumes:
+      - ./churn.db:/app/churn.db
+      - ./models:/app/models
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

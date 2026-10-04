@@ -1,0 +1,127 @@
+{
+    "domain": "OTT / Video Streaming",
+    "champion_model_name": "Logistic Regression",
+    "test_metrics": {
+        "roc_auc": 0.8718498687499674,
+        "f1": 0.4323308270676692,
+        "precision": 0.29411764705882354,
+        "recall": 0.8156028368794326,
+        "accuracy": 0.7986666666666666,
+        "confusion_matrix": [
+            [
+                1083,
+                276
+            ],
+            [
+                26,
+                115
+            ]
+        ]
+    },
+    "cv_results": {
+        "Logistic Regression": {
+            "cv_roc_auc_mean": 0.8472420387745899,
+            "cv_roc_auc_std": 0.01713038335385288,
+            "cv_f1_mean": 0.3931940149529404,
+            "cv_f1_std": 0.009124989189819606,
+            "cv_precision_mean": 0.2648564272782907,
+            "cv_recall_mean": 0.7632976245924545,
+            "cv_accuracy_mean": 0.7776666666666666,
+            "selection_score": 0.6202180268637651
+        },
+        "Random Forest": {
+            "cv_roc_auc_mean": 0.827937638482444,
+            "cv_roc_auc_std": 0.017438375849089333,
+            "cv_f1_mean": 0.40078288403492346,
+            "cv_f1_std": 0.029813186000345913,
+            "cv_precision_mean": 0.28463633953910084,
+            "cv_recall_mean": 0.6784350256171402,
+            "cv_accuracy_mean": 0.808,
+            "selection_score": 0.6143602612586837
+        },
+        "XGBoost": {
+            "cv_roc_auc_mean": 0.8298724176787511,
+            "cv_roc_auc_std": 0.0142290356217857,
+            "cv_f1_mean": 0.40158280141397296,
+            "cv_f1_std": 0.023175191587346468,
+            "cv_precision_mean": 0.2818943407809419,
+            "cv_recall_mean": 0.6979506287843503,
+            "cv_accuracy_mean": 0.8036666666666668,
+            "selection_score": 0.615727609546362
+        }
+    },
+    "feature_names": [
+        "monthly_price",
+        "watch_hours_last_30_days",
+        "days_since_last_watch",
+        "number_of_devices",
+        "number_of_profiles",
+        "downloads_count",
+        "customer_support_tickets",
+        "payment_failures",
+        "tenure_months",
+        "subscription_plan_Basic",
+        "subscription_plan_Premium",
+        "subscription_plan_Standard",
+        "free_trial_converted_No",
+        "free_trial_converted_Yes"
+    ],
+    "numeric_features": [
+        "monthly_price",
+        "watch_hours_last_30_days",
+        "days_since_last_watch",
+        "number_of_devices",
+        "number_of_profiles",
+        "downloads_count",
+        "customer_support_tickets",
+        "payment_failures",
+        "tenure_months"
+    ],
+    "categorical_features": [
+        "subscription_plan",
+        "free_trial_converted"
+    ],
+    "target_column": "churn_label",
+    "top_feature_importances": [
+        [
+            "watch_hours_last_30_days",
+            0.754559678017549
+        ],
+        [
+            "days_since_last_watch",
+            0.5447569048802638
+        ],
+        [
+            "tenure_months",
+            0.47596680659210105
+        ],
+        [
+            "payment_failures",
+            0.44985970459452695
+        ],
+        [
+            "subscription_plan_Standard",
+            0.31844561633366175
+        ],
+        [
+            "free_trial_converted_Yes",
+            0.3062943314518524
+        ],
+        [
+            "customer_support_tickets",
+            0.21659933656485542
+        ],
+        [
+            "number_of_profiles",
+            0.20040840657761325
+        ],
+        [
+            "number_of_devices",
+            0.185986601573815
+        ],
+        [
+            "downloads_count",
+            0.16434719180947469
+        ]
+    ]
+}
