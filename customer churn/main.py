@@ -417,9 +417,9 @@ def predict_churn(
 def list_customers(
     subscription_plan: Optional[str] = Query(None, description="Filter by plan: 'Basic', 'Standard', 'Premium'"),
     contract_type: Optional[str] = Query(None, description="Alias for subscription_plan filter"),
-    risk_tier: Optional[str] = Query(None, description="Filter by risk tier: 'Critical', 'High', 'Medium', 'Low'"),
+    risk_tier: Optional[str] = Query(None, description="Filter by risk tier: 'Critical', 'High', 'Moderate', 'Low'"),
     search: Optional[str] = Query(None, description="Search by customer ID"),
-    sort_by: Optional[str] = Query("risk-desc", description="Sort criteria: 'risk-desc', 'risk-asc', 'price-desc', 'watch-desc'"),
+    sort_by: Optional[str] = Query("recent", description="Sort criteria: 'recent', 'risk-desc', 'risk-asc', 'price-desc', 'watch-desc'"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -441,7 +441,14 @@ def list_customers(
         latest_score = c.scores[0] if c.scores else None
 
         if risk_tier:
-            if not latest_score or latest_score.risk_tier.lower() != risk_tier.lower():
+            if not latest_score or not latest_score.risk_tier:
+                continue
+            filt = risk_tier.strip().lower()
+            rec_tier = latest_score.risk_tier.strip().lower()
+            if filt in ["moderate", "medium"]:
+                if rec_tier not in ["moderate", "medium"]:
+                    continue
+            elif rec_tier != filt:
                 continue
 
         prob = latest_score.churn_probability if latest_score else None
@@ -473,20 +480,21 @@ def list_customers(
             latest_intervention=latest_intervention
         ))
 
-    # Sort items: Critical > High > Medium > Low
-    def sort_key(c: CustomerListItem):
-        weight = TIER_WEIGHTS.get(c.risk_tier, 0)
-        return (weight, c.churn_probability or 0.0)
-
-    if sort_by == "risk-asc":
+    # Sorting
+    if sort_by == "risk-desc":
+        def sort_key(c: CustomerListItem):
+            weight = TIER_WEIGHTS.get(c.risk_tier, 0)
+            return (weight, c.churn_probability or 0.0)
+        items.sort(key=sort_key, reverse=True)
+    elif sort_by == "risk-asc":
         items.sort(key=lambda c: (c.churn_probability or 0.0))
     elif sort_by == "price-desc":
         items.sort(key=lambda c: (c.monthly_price or 0.0), reverse=True)
     elif sort_by == "watch-desc":
         items.sort(key=lambda c: (c.watch_hours_last_30_days or 0.0), reverse=True)
     else:
-        # Default: highest risk first
-        items.sort(key=sort_key, reverse=True)
+        # Default: "recent" - sort by latest scored timestamp descending, fallback to customer_id
+        items.sort(key=lambda c: (c.latest_scored_at or "", c.customer_id), reverse=True)
 
     total_count = len(items)
     paginated_items = items[offset:offset + limit]
@@ -620,18 +628,18 @@ def get_analytics_overview(db: Session = Depends(get_db)):
     total_prob = 0.0
 
     plan_distribution: Dict[str, Dict[str, int]] = {
-        "Basic": {"Critical": 0, "High": 0, "Medium": 0, "Low": 0},
-        "Standard": {"Critical": 0, "High": 0, "Medium": 0, "Low": 0},
-        "Premium": {"Critical": 0, "High": 0, "Medium": 0, "Low": 0},
-        "Other": {"Critical": 0, "High": 0, "Medium": 0, "Low": 0},
+        "Basic": {"Critical": 0, "High": 0, "Moderate": 0, "Medium": 0, "Low": 0},
+        "Standard": {"Critical": 0, "High": 0, "Moderate": 0, "Medium": 0, "Low": 0},
+        "Premium": {"Critical": 0, "High": 0, "Moderate": 0, "Medium": 0, "Low": 0},
+        "Other": {"Critical": 0, "High": 0, "Moderate": 0, "Medium": 0, "Low": 0},
     }
 
     for c in customers:
         price = (c.monthly_price or 8.99)
         total_monthly_revenue += price
         latest_score = c.scores[0] if c.scores else None
-        tier = latest_score.risk_tier if latest_score else "Medium"
-        prob = latest_score.churn_probability if latest_score else 0.45
+        tier = latest_score.risk_tier if latest_score and latest_score.risk_tier else "Moderate"
+        prob = latest_score.churn_probability if latest_score and latest_score.churn_probability is not None else 0.35
         total_prob += prob
 
         plan_key = c.subscription_plan if c.subscription_plan in plan_distribution else "Other"
@@ -644,8 +652,9 @@ def get_analytics_overview(db: Session = Depends(get_db)):
             high_risk_count += 1
             revenue_at_risk += price
             plan_distribution[plan_key]["High"] += 1
-        elif tier == "Medium":
+        elif tier in ["Moderate", "Medium"]:
             medium_risk_count += 1
+            plan_distribution[plan_key]["Moderate"] += 1
             plan_distribution[plan_key]["Medium"] += 1
         else:
             low_risk_count += 1
@@ -691,6 +700,8 @@ def get_analytics_overview(db: Session = Depends(get_db)):
         critical_risk_pct=crit_pct,
         high_risk_count=high_risk_count,
         high_risk_pct=high_pct,
+        moderate_risk_count=medium_risk_count,
+        moderate_risk_pct=med_pct,
         medium_risk_count=medium_risk_count,
         medium_risk_pct=med_pct,
         low_risk_count=low_risk_count,
@@ -701,6 +712,7 @@ def get_analytics_overview(db: Session = Depends(get_db)):
         risk_distribution={
             "Critical": critical_risk_count,
             "High": high_risk_count,
+            "Moderate": medium_risk_count,
             "Medium": medium_risk_count,
             "Low": low_risk_count
         },
@@ -856,7 +868,7 @@ async def upload_batch_csv(
         elif scored.risk_tier == "High":
             high_count += 1
             rev_at_risk += price
-        elif scored.risk_tier == "Medium":
+        elif scored.risk_tier in ["Moderate", "Medium"]:
             med_count += 1
         else:
             low_count += 1
@@ -866,6 +878,7 @@ async def upload_batch_csv(
         rows_processed=len(scored_results),
         critical_risk_detected=crit_count,
         high_risk_detected=high_count,
+        moderate_risk_detected=med_count,
         medium_risk_detected=med_count,
         low_risk_detected=low_count,
         total_revenue_at_risk=round(rev_at_risk, 2),

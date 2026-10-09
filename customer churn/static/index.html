@@ -457,11 +457,12 @@
                   <button class="filter-pill active" data-tier="">All</button>
                   <button class="filter-pill pill-critical" data-tier="Critical">Critical</button>
                   <button class="filter-pill pill-high" data-tier="High">High</button>
-                  <button class="filter-pill pill-moderate" data-tier="Medium">Moderate</button>
+                  <button class="filter-pill pill-moderate" data-tier="Moderate">Moderate</button>
                   <button class="filter-pill pill-low" data-tier="Low">Low</button>
                 </div>
 
                 <select id="recent-sort-by" class="saas-select-sm">
+                  <option value="recent" selected>Recently Scored</option>
                   <option value="risk-desc">Highest Churn Risk</option>
                   <option value="risk-asc">Lowest Churn Risk</option>
                   <option value="price-desc">Highest Monthly Fee</option>
@@ -538,7 +539,7 @@
                   <button class="filter-pill active" data-tier="">All</button>
                   <button class="filter-pill pill-critical" data-tier="Critical">Critical</button>
                   <button class="filter-pill pill-high" data-tier="High">High</button>
-                  <button class="filter-pill pill-moderate" data-tier="Medium">Moderate</button>
+                  <button class="filter-pill pill-moderate" data-tier="Moderate">Moderate</button>
                   <button class="filter-pill pill-low" data-tier="Low">Low</button>
                 </div>
               </div>
@@ -558,6 +559,7 @@
               <div class="filter-field">
                 <span class="filter-label">Sort By:</span>
                 <select id="customer-sort-by" class="saas-select-sm">
+                  <option value="recent" selected>Recently Scored</option>
                   <option value="risk-desc">Highest Churn Risk</option>
                   <option value="risk-asc">Lowest Churn Risk</option>
                   <option value="price-desc">Highest Monthly Fee</option>
@@ -617,9 +619,10 @@
             <div class="header-actions">
               <div class="preset-buttons">
                 <span class="preset-label">Test Presets:</span>
-                <button class="btn btn-xs btn-outline-coral" onclick="applyPreset('critical')">High Churner</button>
-                <button class="btn btn-xs btn-outline-purple" onclick="applyPreset('moderate')">Moderate Risk</button>
-                <button class="btn btn-xs btn-outline-green" onclick="applyPreset('loyal')">Loyal Subscriber</button>
+                <button type="button" class="btn btn-xs btn-outline-coral" onclick="applyPreset('critical')">Critical (≥80%)</button>
+                <button type="button" class="btn btn-xs btn-outline-orange" onclick="applyPreset('high')">High (60–80%)</button>
+                <button type="button" class="btn btn-xs btn-outline-purple" onclick="applyPreset('moderate')">Moderate (30–60%)</button>
+                <button type="button" class="btn btn-xs btn-outline-green" onclick="applyPreset('loyal')">Low (&lt;30%)</button>
               </div>
             </div>
           </div>
@@ -657,7 +660,7 @@
                   </div>
                   <div class="form-group">
                     <label>Tenure (Months)</label>
-                    <input type="number" id="pred-tenure" class="saas-input" min="1" max="120" value="4" required />
+                    <input type="number" id="pred-tenure" class="saas-input" min="1" max="120" value="10" required />
                   </div>
                   <div class="form-group">
                     <label>Free Trial Converted</label>
@@ -671,22 +674,22 @@
                 <div class="form-grid-2">
                   <div class="form-group">
                     <label>Watch Hours (Last 30 Days)</label>
-                    <input type="number" id="pred-watch-hours" class="saas-input" step="0.1" value="6.5" required />
+                    <input type="number" id="pred-watch-hours" class="saas-input" step="0.1" value="26.0" required />
                   </div>
                   <div class="form-group">
                     <label>Days Since Last Stream</label>
-                    <input type="number" id="pred-days-inactive" class="saas-input" min="0" max="180" value="16" required />
+                    <input type="number" id="pred-days-inactive" class="saas-input" min="0" max="180" value="4" required />
                   </div>
                 </div>
 
                 <div class="form-grid-2">
                   <div class="form-group">
                     <label>Customer Support Tickets</label>
-                    <input type="number" id="pred-tickets" class="saas-input" min="0" max="20" value="2" required />
+                    <input type="number" id="pred-tickets" class="saas-input" min="0" max="20" value="0" required />
                   </div>
                   <div class="form-group">
                     <label>Payment Failures (Last 90d)</label>
-                    <input type="number" id="pred-failures" class="saas-input" min="0" max="10" value="1" required />
+                    <input type="number" id="pred-failures" class="saas-input" min="0" max="10" value="0" required />
                   </div>
                 </div>
 
@@ -701,7 +704,7 @@
                   </div>
                   <div class="form-group">
                     <label>Downloads (30d)</label>
-                    <input type="number" id="pred-downloads" class="saas-input" min="0" max="50" value="1" required />
+                    <input type="number" id="pred-downloads" class="saas-input" min="0" max="50" value="4" required />
                   </div>
                 </div>
 

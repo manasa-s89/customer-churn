@@ -160,6 +160,8 @@ class AnalyticsOverviewResponse(BaseModel):
     critical_risk_pct: float = 0.0
     high_risk_count: int = 0
     high_risk_pct: float = 0.0
+    moderate_risk_count: int = 0
+    moderate_risk_pct: float = 0.0
     medium_risk_count: int = 0
     medium_risk_pct: float = 0.0
     low_risk_count: int = 0
@@ -180,6 +182,7 @@ class CSVUploadResponse(BaseModel):
     rows_processed: int
     critical_risk_detected: int = 0
     high_risk_detected: int = 0
+    moderate_risk_detected: int = 0
     medium_risk_detected: int = 0
     low_risk_detected: int = 0
     total_revenue_at_risk: float

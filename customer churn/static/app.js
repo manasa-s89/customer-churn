@@ -17,12 +17,12 @@ const state = {
     riskTier: '',
     contract: '',
     search: '',
-    sortBy: 'risk-desc'
+    sortBy: 'recent'
   },
   recentFilters: {
     riskTier: '',
     search: '',
-    sortBy: 'risk-desc'
+    sortBy: 'recent'
   },
   interventions: [],
   filteredInterventions: [],
@@ -250,7 +250,7 @@ function renderRiskDonutChart(dist) {
   state.charts.donut = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Critical Risk (≥90%)', 'High Risk (70–89%)', 'Moderate Risk (40–69%)', 'Low Risk (<40%)'],
+      labels: ['Critical Risk (≥80%)', 'High Risk (60–79%)', 'Moderate Risk (30–59%)', 'Low Risk (<30%)'],
       datasets: [{
         data: [critical, high, moderate, low],
         backgroundColor: [
@@ -626,10 +626,10 @@ function renderRecentCustomersTable(customers) {
 
   let html = '';
   customers.slice(0, 10).forEach(c => {
-    const prob = c.churn_probability || 0;
+    const prob = (c.churn_probability !== undefined && c.churn_probability !== null) ? Number(c.churn_probability) : 0;
     const probPct = c.churn_probability_pct || `${(prob * 100).toFixed(1)}%`;
-    const tier = c.risk_tier || (prob >= 0.90 ? 'Critical' : (prob >= 0.70 ? 'High' : (prob >= 0.40 ? 'Moderate' : 'Low')));
-    const tierClass = tier.toLowerCase();
+    const tier = c.risk_tier || (prob >= 0.80 ? 'Critical' : (prob >= 0.60 ? 'High' : (prob >= 0.30 ? 'Moderate' : 'Low')));
+    const tierClass = tier === 'Medium' ? 'moderate' : tier.toLowerCase();
     const barColor = tier === 'Critical' ? '#F43F5E' : (tier === 'High' ? '#FB923C' : (tier === 'Medium' || tier === 'Moderate' ? '#38BDF8' : '#10B981'));
 
     const interventionTitle = c.latest_intervention?.title || 'Proactive Retention Playbook';
@@ -666,7 +666,13 @@ function applyRecentFilters() {
   let list = [...state.recentCustomers];
 
   if (state.recentFilters.riskTier) {
-    list = list.filter(c => c.risk_tier && c.risk_tier.toLowerCase() === state.recentFilters.riskTier.toLowerCase());
+    const fTier = state.recentFilters.riskTier.toLowerCase();
+    list = list.filter(c => {
+      if (!c.risk_tier) return false;
+      const t = c.risk_tier.toLowerCase();
+      if (fTier === 'moderate' || fTier === 'medium') return t === 'moderate' || t === 'medium';
+      return t === fTier;
+    });
   }
 
   if (state.recentFilters.search) {
@@ -680,7 +686,8 @@ function applyRecentFilters() {
       case 'risk-asc': return (a.churn_probability || 0) - (b.churn_probability || 0);
       case 'price-desc': return (b.monthly_price || 0) - (a.monthly_price || 0);
       case 'watch-desc': return (b.watch_hours_last_30_days || 0) - (a.watch_hours_last_30_days || 0);
-      default: return 0;
+      case 'recent':
+      default: return (b.latest_scored_at || '').localeCompare(a.latest_scored_at || '');
     }
   });
 
@@ -724,13 +731,13 @@ async function loadCustomers() {
 
 function useFallbackCustomers() {
   state.customers = [
-    { customer_id: 'OTT-BATCH-01', tenure_months: 2, subscription_plan: 'Basic', monthly_price: 8.99, watch_hours_last_30_days: 1.5, days_since_last_watch: 35, customer_support_tickets: 4, payment_failures: 2, churn_probability: 0.998, churn_probability_pct: '99.8%', risk_tier: 'Critical', latest_intervention: { title: 'Proactive Billing Support & 1-Click Payment Recovery' } },
-    { customer_id: 'OTT-20620', tenure_months: 3, subscription_plan: 'Basic', monthly_price: 9.56, watch_hours_last_30_days: 2.4, days_since_last_watch: 38, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.985, churn_probability_pct: '98.5%', risk_tier: 'Critical', latest_intervention: { title: 'Pause Subscription Offer (1–3 Months Free Hold)' } },
-    { customer_id: 'OTT-73910', tenure_months: 5, subscription_plan: 'Standard', monthly_price: 14.99, watch_hours_last_30_days: 9.0, days_since_last_watch: 18, customer_support_tickets: 2, payment_failures: 1, churn_probability: 0.842, churn_probability_pct: '84.2%', risk_tier: 'High', latest_intervention: { title: 'Personalized Content Discovery Watchlist' } },
-    { customer_id: 'OTT-19284', tenure_months: 8, subscription_plan: 'Standard', monthly_price: 14.99, watch_hours_last_30_days: 12.5, days_since_last_watch: 14, customer_support_tickets: 1, payment_failures: 0, churn_probability: 0.720, churn_probability_pct: '72.0%', risk_tier: 'High', latest_intervention: { title: 'Annual Discount Upgrade Incentive' } },
-    { customer_id: 'OTT-55219', tenure_months: 14, subscription_plan: 'Basic', monthly_price: 8.99, watch_hours_last_30_days: 18.0, days_since_last_watch: 9, customer_support_tickets: 1, payment_failures: 0, churn_probability: 0.540, churn_probability_pct: '54.0%', risk_tier: 'Moderate', latest_intervention: { title: 'Streaming Concierge Check-in' } },
-    { customer_id: 'OTT-88231', tenure_months: 20, subscription_plan: 'Premium', monthly_price: 20.99, watch_hours_last_30_days: 45.0, days_since_last_watch: 4, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.220, churn_probability_pct: '22.0%', risk_tier: 'Low', latest_intervention: { title: 'VIP Loyalty Perks' } },
-    { customer_id: 'OTT-31049', tenure_months: 36, subscription_plan: 'Premium', monthly_price: 20.99, watch_hours_last_30_days: 72.0, days_since_last_watch: 1, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.085, churn_probability_pct: '8.5%', risk_tier: 'Low', latest_intervention: { title: 'Loyalty Appreciation' } }
+    { customer_id: 'OTT-84920', tenure_months: 10, subscription_plan: 'Standard', monthly_price: 14.99, watch_hours_last_30_days: 26.0, days_since_last_watch: 4, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.369, churn_probability_pct: '36.9%', risk_tier: 'Moderate', latest_intervention: { title: 'Personalized Trending Watchlist' } },
+    { customer_id: 'OTT-73910', tenure_months: 5, subscription_plan: 'Basic', monthly_price: 8.99, watch_hours_last_30_days: 16.0, days_since_last_watch: 10, customer_support_tickets: 1, payment_failures: 0, churn_probability: 0.760, churn_probability_pct: '76.0%', risk_tier: 'High', latest_intervention: { title: 'Annual Plan Switch Loyalty Discount' } },
+    { customer_id: 'OTT-31049', tenure_months: 24, subscription_plan: 'Premium', monthly_price: 20.99, watch_hours_last_30_days: 60.0, days_since_last_watch: 1, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.074, churn_probability_pct: '7.4%', risk_tier: 'Low', latest_intervention: { title: 'VIP Premiere Early Screening Pass' } },
+    { customer_id: 'OTT-BATCH-01', tenure_months: 2, subscription_plan: 'Basic', monthly_price: 8.99, watch_hours_last_30_days: 1.5, days_since_last_watch: 35, customer_support_tickets: 4, payment_failures: 2, churn_probability: 0.998, churn_probability_pct: '99.8%', risk_tier: 'Critical', latest_intervention: { title: 'Proactive Billing Support & 1-Click Recovery' } },
+    { customer_id: 'OTT-55219', tenure_months: 14, subscription_plan: 'Standard', monthly_price: 14.99, watch_hours_last_30_days: 22.0, days_since_last_watch: 6, customer_support_tickets: 1, payment_failures: 0, churn_probability: 0.442, churn_probability_pct: '44.2%', risk_tier: 'Moderate', latest_intervention: { title: 'Streaming Quality & Buffering Concierge' } },
+    { customer_id: 'OTT-88231', tenure_months: 20, subscription_plan: 'Premium', monthly_price: 20.99, watch_hours_last_30_days: 48.0, days_since_last_watch: 3, customer_support_tickets: 0, payment_failures: 0, churn_probability: 0.165, churn_probability_pct: '16.5%', risk_tier: 'Low', latest_intervention: { title: 'VIP Loyalty Recognition' } },
+    { customer_id: 'OTT-19284', tenure_months: 6, subscription_plan: 'Standard', monthly_price: 14.99, watch_hours_last_30_days: 14.0, days_since_last_watch: 12, customer_support_tickets: 1, payment_failures: 0, churn_probability: 0.680, churn_probability_pct: '68.0%', risk_tier: 'High', latest_intervention: { title: 'Curated Drama & Comedy Series Recommendations' } }
   ];
   state.totalCustomers = state.customers.length;
   state.recentCustomers = [...state.customers];
@@ -742,7 +749,13 @@ function applyFiltersAndSort() {
   let list = [...state.customers];
 
   if (state.filters.riskTier) {
-    list = list.filter(c => c.risk_tier && c.risk_tier.toLowerCase() === state.filters.riskTier.toLowerCase());
+    const fTier = state.filters.riskTier.toLowerCase();
+    list = list.filter(c => {
+      if (!c.risk_tier) return false;
+      const t = c.risk_tier.toLowerCase();
+      if (fTier === 'moderate' || fTier === 'medium') return t === 'moderate' || t === 'medium';
+      return t === fTier;
+    });
   }
 
   if (state.filters.contract) {
@@ -760,7 +773,8 @@ function applyFiltersAndSort() {
       case 'risk-asc': return (a.churn_probability || 0) - (b.churn_probability || 0);
       case 'price-desc': return (b.monthly_price || 0) - (a.monthly_price || 0);
       case 'watch-desc': return (b.watch_hours_last_30_days || 0) - (a.watch_hours_last_30_days || 0);
-      default: return 0;
+      case 'recent':
+      default: return (b.latest_scored_at || '').localeCompare(a.latest_scored_at || '');
     }
   });
 
@@ -785,10 +799,10 @@ function renderCustomerTablePage() {
 
   let html = '';
   pageItems.forEach(c => {
-    const prob = c.churn_probability || 0;
+    const prob = (c.churn_probability !== undefined && c.churn_probability !== null) ? Number(c.churn_probability) : 0;
     const probPct = c.churn_probability_pct || `${(prob * 100).toFixed(1)}%`;
-    const tier = c.risk_tier || (prob >= 0.90 ? 'Critical' : (prob >= 0.70 ? 'High' : (prob >= 0.40 ? 'Moderate' : 'Low')));
-    const tierClass = tier.toLowerCase();
+    const tier = c.risk_tier || (prob >= 0.80 ? 'Critical' : (prob >= 0.60 ? 'High' : (prob >= 0.30 ? 'Moderate' : 'Low')));
+    const tierClass = tier === 'Medium' ? 'moderate' : tier.toLowerCase();
     const barColor = tier === 'Critical' ? '#F43F5E' : (tier === 'High' ? '#FB923C' : (tier === 'Medium' || tier === 'Moderate' ? '#38BDF8' : '#10B981'));
 
     html += `
@@ -846,39 +860,52 @@ function applyPreset(presetType) {
     document.getElementById('pred-price').value = '8.99';
     document.getElementById('pred-tenure').value = '2';
     document.getElementById('pred-trial').value = 'No';
-    document.getElementById('pred-watch-hours').value = '1.2';
+    document.getElementById('pred-watch-hours').value = '1.5';
     document.getElementById('pred-days-inactive').value = '35';
     document.getElementById('pred-tickets').value = '4';
     document.getElementById('pred-failures').value = '2';
     document.getElementById('pred-devices').value = '1';
     document.getElementById('pred-profiles').value = '1';
     document.getElementById('pred-downloads').value = '0';
+  } else if (presetType === 'high') {
+    document.getElementById('pred-cust-id').value = 'OTT-PRESET-HIGH';
+    document.getElementById('pred-plan').value = 'Basic';
+    document.getElementById('pred-price').value = '8.99';
+    document.getElementById('pred-tenure').value = '5';
+    document.getElementById('pred-trial').value = 'Yes';
+    document.getElementById('pred-watch-hours').value = '16.0';
+    document.getElementById('pred-days-inactive').value = '10';
+    document.getElementById('pred-tickets').value = '1';
+    document.getElementById('pred-failures').value = '0';
+    document.getElementById('pred-devices').value = '2';
+    document.getElementById('pred-profiles').value = '1';
+    document.getElementById('pred-downloads').value = '2';
   } else if (presetType === 'moderate') {
     document.getElementById('pred-cust-id').value = 'OTT-PRESET-MOD';
     document.getElementById('pred-plan').value = 'Standard';
     document.getElementById('pred-price').value = '14.99';
-    document.getElementById('pred-tenure').value = '7';
+    document.getElementById('pred-tenure').value = '10';
     document.getElementById('pred-trial').value = 'Yes';
-    document.getElementById('pred-watch-hours').value = '16.5';
-    document.getElementById('pred-days-inactive').value = '11';
-    document.getElementById('pred-tickets').value = '1';
+    document.getElementById('pred-watch-hours').value = '26.0';
+    document.getElementById('pred-days-inactive').value = '4';
+    document.getElementById('pred-tickets').value = '0';
     document.getElementById('pred-failures').value = '0';
     document.getElementById('pred-devices').value = '2';
     document.getElementById('pred-profiles').value = '2';
-    document.getElementById('pred-downloads').value = '2';
-  } else if (presetType === 'loyal') {
-    document.getElementById('pred-cust-id').value = 'OTT-PRESET-LOYAL';
+    document.getElementById('pred-downloads').value = '4';
+  } else if (presetType === 'loyal' || presetType === 'low') {
+    document.getElementById('pred-cust-id').value = 'OTT-PRESET-LOW';
     document.getElementById('pred-plan').value = 'Premium';
     document.getElementById('pred-price').value = '20.99';
-    document.getElementById('pred-tenure').value = '28';
+    document.getElementById('pred-tenure').value = '24';
     document.getElementById('pred-trial').value = 'Yes';
-    document.getElementById('pred-watch-hours').value = '64.0';
+    document.getElementById('pred-watch-hours').value = '60.0';
     document.getElementById('pred-days-inactive').value = '1';
     document.getElementById('pred-tickets').value = '0';
     document.getElementById('pred-failures').value = '0';
     document.getElementById('pred-devices').value = '4';
     document.getElementById('pred-profiles').value = '3';
-    document.getElementById('pred-downloads').value = '12';
+    document.getElementById('pred-downloads').value = '10';
   }
 }
 
@@ -1566,43 +1593,38 @@ function renderDetailFallback(customerId) {
   renderCustomerDetailDrawer({
     customer: {
       customer_id: customerId,
-      subscription_plan: 'Basic',
-      monthly_price: 8.99,
-      watch_hours_last_30_days: 1.5,
-      days_since_last_watch: 35,
-      number_of_devices: 1,
-      number_of_profiles: 1,
-      downloads_count: 0,
-      customer_support_tickets: 4,
-      payment_failures: 2,
-      free_trial_converted: 'No',
-      tenure_months: 2
+      subscription_plan: 'Standard',
+      monthly_price: 14.99,
+      watch_hours_last_30_days: 26.0,
+      days_since_last_watch: 4,
+      number_of_devices: 2,
+      number_of_profiles: 2,
+      downloads_count: 4,
+      customer_support_tickets: 0,
+      payment_failures: 0,
+      free_trial_converted: 'Yes',
+      tenure_months: 10
     },
     latest_score: {
-      churn_probability: 0.998,
-      churn_probability_pct: '99.8%',
-      risk_tier: 'Critical',
+      churn_probability: 0.369,
+      churn_probability_pct: '36.9%',
+      risk_tier: 'Moderate',
       top_risk_drivers: [
-        { feature: 'payment_failures', impact: 0.75 },
-        { feature: 'days_since_last_watch', impact: 0.62 },
-        { feature: 'customer_support_tickets', impact: 0.35 }
+        { feature: 'monthly_price', impact: 0.12 },
+        { feature: 'days_since_last_watch', impact: 0.08 }
       ],
       top_protective_factors: [
-        { feature: 'watch_hours_last_30_days', impact: -0.05 }
+        { feature: 'watch_hours_last_30_days', impact: -0.35 },
+        { feature: 'tenure_months', impact: -0.22 }
       ],
-      explanation_summary: 'CRITICAL RISK (99.8%). Urgent triggers: 2 payment card declines, 35 days without video stream, and 4 playback tickets.'
+      explanation_summary: 'MODERATE RISK (36.9%). Subscriber is regularly streaming with 26.0 hours logged in the last 30 days and zero billing declines.'
     },
     current_recommendations: {
       suggested_actions: [
         {
-          title: 'Proactive Billing Support & 1-Click Payment Recovery',
-          description: 'Deploy automated smart dunning email and an in-app modal prompt offering 7 days of grace streaming while updating payment method.',
-          urgency: 'Immediate'
-        },
-        {
-          title: 'Pause Subscription Offer (1–3 Months Free Hold)',
-          description: 'Deploy retention pause modal to preserve watchlist history instead of complete account cancellation.',
-          urgency: 'Immediate'
+          title: 'Personalized Trending Watchlist Recommendation',
+          description: 'Deploy curated push and email watchlist featuring new trending series to keep viewing engagement high.',
+          urgency: 'Medium'
         }
       ]
     },
