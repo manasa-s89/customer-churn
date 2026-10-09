@@ -1,7 +1,7 @@
 @echo off
-title RetainPulse AI Launcher
+title ChurnIQ Pro Launcher
 echo ========================================================
-echo  Starting RetainPulse AI Churn Platform & Public Link
+echo  Starting ChurnIQ Customer Churn & Behaviour Platform
 echo ========================================================
 
 cd /d "%~dp0"
@@ -15,7 +15,7 @@ start "" ".\cloudflared.exe" tunnel --url http://127.0.0.1:8000
 
 echo.
 echo ========================================================
-echo RetainPulse AI is running!
+echo ChurnIQ Pro is running!
 echo Local Dashboard: http://127.0.0.1:8000/dashboard
 echo Local API Docs:  http://127.0.0.1:8000/docs
 echo ========================================================
