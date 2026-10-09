@@ -12,7 +12,7 @@ print("Total churn scores:", c.fetchone()[0], flush=True)
 c.execute("SELECT count(*) FROM interventions")
 print("Total interventions:", c.fetchone()[0], flush=True)
 
-c.execute("SELECT customer_id, tenure, monthly_charges, contract_type, support_tickets FROM customers LIMIT 5")
+c.execute("SELECT customer_id, tenure_months, monthly_price, subscription_plan, customer_support_tickets FROM customers LIMIT 5")
 print("Sample customers:", c.fetchall(), flush=True)
 
 c.execute("SELECT id, customer_id, action_type, status FROM interventions LIMIT 5")
