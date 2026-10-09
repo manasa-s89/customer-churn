@@ -3,647 +3,1042 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RetainPulse AI — Enterprise Customer Churn & Retention Hub</title>
-  <meta name="description" content="AI-Powered Customer Churn Prediction, Explainable AI Risk Drivers, and Rule-Based Retention Intervention Management." />
+  <title>ChurnIQ — Customer Churn & Behaviour Analytics</title>
+  <meta name="description" content="Enterprise dark SaaS customer churn analytics, behaviour prediction, and automated retention interventions dashboard." />
 
-  <!-- Google Fonts -->
+  <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
 
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- Bespoke Stylesheet -->
+  <!-- Dark SaaS Theme Stylesheet -->
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body class="dark-theme">
-  <div class="app-layout">
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+<body class="dark-saas-body">
+  <div class="saas-layout">
+    <!-- ====================================================================
+         A. LEFT SIDEBAR (Fixed 230px, Dark Navy with subtle border)
+         ==================================================================== -->
+    <aside class="saas-sidebar" id="sidebar">
+      <!-- Top: ChurnIQ Logo with Purple Circular Icon -->
+      <div class="sidebar-brand">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="url(#brand-grad)" />
+            <path d="M7 13.5L10.5 10L13.5 13L17 8.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 8.5H17V11.5" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="brand-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#8B5CF6"/>
+                <stop offset="1" stop-color="#6366F1"/>
+              </linearGradient>
+            </defs>
           </svg>
         </div>
         <div class="brand-text">
-          <span class="brand-name">RetainPulse</span>
-          <span class="brand-badge">AI 2.0</span>
+          <span class="brand-name">ChurnIQ</span>
+          <span class="brand-version-tag">PRO</span>
         </div>
       </div>
 
-      <nav class="nav-menu">
-        <button class="nav-item active" data-page="overview" id="nav-overview">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect width="7" height="9" x="3" y="3" rx="1"/>
-            <rect width="7" height="5" x="14" y="3" rx="1"/>
-            <rect width="7" height="9" x="14" y="12" rx="1"/>
-            <rect width="7" height="5" x="3" y="16" rx="1"/>
+      <!-- Navigation Menu -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">MAIN NAVIGATION</div>
+
+        <!-- 1. Overview -->
+        <button class="nav-link active" data-page="overview" id="nav-overview">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+            <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+            <rect x="3" y="16" width="7" height="5" rx="1.5"/>
           </svg>
-          <span>Overview</span>
+          <span class="nav-label">Overview</span>
         </button>
 
-        <button class="nav-item" data-page="customers" id="nav-customers">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 2. Customers -->
+        <button class="nav-link" data-page="customers" id="nav-customers">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
             <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
           </svg>
-          <span>Customer Directory</span>
+          <span class="nav-label">Customers</span>
         </button>
 
-        <button class="nav-item" data-page="interventions" id="nav-interventions">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 3. Predict -->
+        <button class="nav-link" data-page="predict" id="nav-predict">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/>
-            <circle cx="12" cy="12" r="6"/>
-            <circle cx="12" cy="12" r="2"/>
+            <polyline points="12 6 12 12 16 14"/>
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
           </svg>
-          <span>Interventions Hub</span>
-          <span class="badge-count" id="badge-interventions-count">0</span>
+          <span class="nav-label">Predict</span>
         </button>
 
-        <button class="nav-item" data-page="upload" id="nav-upload">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <!-- 4. Batch Score -->
+        <button class="nav-link" data-page="batch" id="nav-batch">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" x2="12" y1="3" y2="15"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <span>Batch CSV Upload</span>
+          <span class="nav-label">Batch Score</span>
+        </button>
+
+        <!-- 5. Interventions -->
+        <button class="nav-link" data-page="interventions" id="nav-interventions">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <polyline points="9 12 11 14 15 10"/>
+          </svg>
+          <span class="nav-label">Interventions</span>
+          <span class="nav-badge" id="sidebar-interventions-badge">0</span>
         </button>
       </nav>
 
+      <!-- Sidebar Bottom: Model Connection Status -->
       <div class="sidebar-footer">
-        <div class="model-status-card">
-          <div class="model-status-header">
-            <span class="pulse-indicator"></span>
-            <span class="model-status-label">ML Champion Engine</span>
+        <div class="model-status-widget">
+          <div class="widget-row">
+            <span class="status-indicator-dot pulse-purple"></span>
+            <span class="widget-title" id="sidebar-model-status">Logistic Regression</span>
           </div>
-          <p class="model-status-desc" id="sidebar-model-info">Logistic Regression (92.3% AUC)</p>
-          <div class="model-status-meta">
-            <span>Database: SQLite</span>
-            <span id="sidebar-db-status">Connected</span>
+          <p class="widget-sub" id="sidebar-model-sub">87.2% AUC &bull; OTT Churn</p>
+          <div class="widget-meta">
+            <span class="meta-tag">v2.0.0</span>
+            <span class="meta-db" id="sidebar-db-status">DB Connected</span>
           </div>
         </div>
-        <a href="/docs" target="_blank" class="nav-item api-docs-btn" id="nav-docs">
-          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+
+        <a href="/docs" target="_blank" class="sidebar-api-link" title="Open FastAPI Interactive Swagger Documentation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
           </svg>
-          <span>Swagger API Docs &nearr;</span>
+          <span>Swagger API Docs</span>
         </a>
       </div>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="main-content">
-      <!-- Top Navigation Bar -->
-      <header class="topbar">
+    <!-- ====================================================================
+         MAIN APP CONTAINER
+         ==================================================================== -->
+    <div class="saas-main-wrapper">
+      <!-- B. SLIM TOP HEADER -->
+      <header class="saas-topbar">
         <div class="topbar-left">
-          <h1 class="page-title" id="page-title">Executive Overview</h1>
-          <p class="page-subtitle" id="page-subtitle">Real-time churn risk detection, revenue-at-risk exposure, and retention playbook execution.</p>
+          <div class="breadcrumb" id="topbar-breadcrumb">
+            <span class="crumb-parent">Platform</span>
+            <span class="crumb-divider">/</span>
+            <span class="crumb-active" id="topbar-page-label">Overview</span>
+          </div>
         </div>
 
         <div class="topbar-right">
-          <div class="simulator-controls">
-            <button class="btn btn-sm btn-secondary" id="btn-step-sim" onclick="stepLiveEvent()" title="Inject a single simulated real-time event immediately">
+          <!-- Real-Time Simulator Controls -->
+          <div class="topbar-sim-controls">
+            <button class="btn btn-xs btn-ghost" id="btn-step-sim" onclick="stepLiveEvent()" title="Trigger a single real-time subscriber event">
               <span>⚡ Sample Event</span>
             </button>
-            <button class="btn btn-sm btn-live-sim" id="btn-toggle-sim" onclick="toggleLiveSimulation()">
-              <span class="sim-pulse-dot"></span>
+            <button class="btn btn-xs btn-sim-toggle" id="btn-toggle-sim" onclick="toggleLiveSimulation()">
+              <span class="sim-dot"></span>
               <span id="btn-toggle-sim-text">Start Live Stream</span>
             </button>
           </div>
 
-          <div class="quick-status-pill">
-            <span class="status-dot green"></span>
-            <span id="topbar-api-status">API Ready</span>
+          <!-- Compact Refresh Button -->
+          <button class="icon-btn" id="btn-refresh-data" title="Refresh Dashboard Data" onclick="refreshCurrentPage()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+
+          <!-- Notification Bell -->
+          <div class="notification-wrap">
+            <button class="icon-btn" id="btn-notifications" onclick="toggleNotificationPanel()" title="View Notifications">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span class="notif-unread-dot" id="notif-dot"></span>
+            </button>
+
+            <!-- Notification Dropdown Panel -->
+            <div class="notifications-panel" id="notifications-panel" style="display: none;">
+              <div class="notif-header">
+                <span>Recent System Alerts</span>
+                <span class="badge-pill">Live</span>
+              </div>
+              <div class="notif-list" id="notif-list-container">
+                <div class="notif-item">
+                  <div class="notif-dot-tag red"></div>
+                  <div>
+                    <div class="notif-text">Critical Churn Queue active: 14 accounts detected.</div>
+                    <div class="notif-time">Just now</div>
+                  </div>
+                </div>
+                <div class="notif-item">
+                  <div class="notif-dot-tag blue"></div>
+                  <div>
+                    <div class="notif-text">ML Champion Model v2.0 loaded with 92.3% AUC.</div>
+                    <div class="notif-time">Connected</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <button class="btn btn-primary" id="btn-open-quick-score">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Score Single Customer</span>
-          </button>
+          <!-- User Profile Area -->
+          <div class="user-profile-widget">
+            <div class="avatar-circle">MS</div>
+            <div class="user-meta">
+              <span class="user-name">Manasa S.</span>
+              <span class="user-role">Retention Lead</span>
+            </div>
+          </div>
         </div>
       </header>
 
-      <!-- Live Real-Time Event Activity Ticker (Simulated Pipeline) -->
-      <div class="live-event-banner" id="live-event-banner">
-        <div class="banner-badge">
-          <span class="live-radar-dot"></span>
-          <span>SIMULATED STREAM</span>
+      <!-- Real-time Event Notification Ticker -->
+      <div class="live-event-ticker" id="live-event-banner">
+        <div class="ticker-badge">
+          <span class="ticker-pulse"></span>
+          <span>STREAMING INGESTION</span>
         </div>
-        <div class="banner-text" id="live-banner-message">
-          Simulated real-time ingestion pipeline ready. Click <strong>"Start Live Stream"</strong> or <strong>"⚡ Sample Event"</strong> to simulate subscriber activities.
+        <div class="ticker-msg" id="live-banner-message">
+          Real-time event pipeline ready. Click <strong>"⚡ Sample Event"</strong> to simulate instant behavioral risk shifts.
         </div>
-        <div class="banner-time" id="live-banner-time">Real-Time Ingestion Active</div>
+        <div class="ticker-time" id="live-banner-time">Active</div>
       </div>
 
-      <!-- VIEW 1: OVERVIEW PAGE -->
-      <section class="page-view active" id="view-overview">
-        <!-- KPI Metrics Grid -->
-        <div class="kpi-grid">
-          <div class="kpi-card glass-card">
-            <div class="kpi-header">
-              <span class="kpi-title">Total Customers</span>
-              <div class="kpi-icon-wrap blue">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
+      <!-- MAIN CONTENT PAGES -->
+      <main class="saas-content">
+        <!-- ==================================================================
+             VIEW 1: OVERVIEW (Exact Style B Layout)
+             ================================================================== -->
+        <section class="page-view active" id="view-overview">
+          <!-- C. MAIN DASHBOARD HEADING -->
+          <div class="dashboard-header-block">
+            <div class="header-titles">
+              <h1 class="dashboard-title">Dashboard Overview</h1>
+              <p class="dashboard-subtitle">Monitor customer behaviour and predict churn risk.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-sm btn-primary-purple" onclick="navigateTo('predict')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-total-customers">--</div>
-            <div class="kpi-footer">
-              <span class="trend-badge positive">&uarr; Active Cohort</span>
-              <span class="kpi-subtext">Monitored accounts</span>
-            </div>
-          </div>
-
-          <div class="kpi-card glass-card">
-            <div class="kpi-header">
-              <span class="kpi-title">High Risk Churn</span>
-              <div class="kpi-icon-wrap red">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                  <line x1="12" y1="9" x2="12" y2="13"></line>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-high-risk">--</div>
-            <div class="kpi-footer">
-              <span class="trend-badge negative" id="kpi-high-risk-pct">--%</span>
-              <span class="kpi-subtext">Immediate action required</span>
-            </div>
-          </div>
-
-          <div class="kpi-card glass-card">
-            <div class="kpi-header">
-              <span class="kpi-title">Monthly Revenue at Risk</span>
-              <div class="kpi-icon-wrap amber">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <line x1="12" y1="1" x2="12" y2="23"></line>
-                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                </svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-revenue-at-risk">$--</div>
-            <div class="kpi-footer">
-              <span class="trend-badge neutral" id="kpi-annual-revenue-subtext">Annualized: $--</span>
-            </div>
-          </div>
-
-          <div class="kpi-card glass-card">
-            <div class="kpi-header">
-              <span class="kpi-title">Avg Churn Probability</span>
-              <div class="kpi-icon-wrap violet">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
-              </div>
-            </div>
-            <div class="kpi-value" id="kpi-avg-churn-rate">--%</div>
-            <div class="kpi-footer">
-              <span class="trend-badge positive">&darr; Target &lt; 35%</span>
-              <span class="kpi-subtext">Overall portfolio rate</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Charts Row -->
-        <div class="grid-2-col">
-          <!-- Risk Distribution Donut -->
-          <div class="chart-card glass-card">
-            <div class="card-header">
-              <div>
-                <h3 class="card-title">Churn Risk Distribution</h3>
-                <p class="card-subtitle">Breakdown of subscriber portfolio across 4 ML risk tiers</p>
-              </div>
-              <span class="card-badge">4 Tiers</span>
-            </div>
-            <div class="chart-wrapper donut-wrap">
-              <canvas id="chart-risk-distribution"></canvas>
-            </div>
-            <div class="legend-stats" id="donut-legend-stats">
-              <!-- Dynamically filled with Critical, High, Medium, Low -->
-            </div>
-          </div>
-
-          <!-- Trend Over Time Line Chart -->
-          <div class="chart-card glass-card">
-            <div class="card-header">
-              <div>
-                <h3 class="card-title">Risk & Intervention Trajectory</h3>
-                <p class="card-subtitle">Average churn probability and active interventions over time</p>
-              </div>
-              <span class="card-badge">6-Week Trend</span>
-            </div>
-            <div class="chart-wrapper">
-              <canvas id="chart-trend-over-time"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- Segment Breakdown & Priority High-Risk Alerts -->
-        <div class="grid-2-col">
-          <!-- Subscription Plan Segment Risk -->
-          <div class="chart-card glass-card">
-            <div class="card-header">
-              <div>
-                <h3 class="card-title">Risk by Subscription Plan Segment</h3>
-                <p class="card-subtitle">Churn vulnerability comparison across Basic, Standard & Premium tiers</p>
-              </div>
-            </div>
-            <div class="segment-bars" id="segment-bars-container">
-              <!-- Dynamic Bars -->
-            </div>
-          </div>
-
-          <!-- Immediate Action Alert Feed -->
-          <div class="chart-card glass-card">
-            <div class="card-header">
-              <div>
-                <h3 class="card-title">Critical Attention Queue</h3>
-                <p class="card-subtitle">Top accounts with highest churn probability & active triggers</p>
-              </div>
-              <button class="btn btn-sm btn-secondary" onclick="navigateTo('customers')">View All &rarr;</button>
-            </div>
-            <div class="priority-feed" id="priority-feed-container">
-              <!-- Dynamic alert items -->
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 2: CUSTOMER DIRECTORY -->
-      <section class="page-view" id="view-customers">
-        <div class="toolbar glass-card">
-          <div class="toolbar-search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="customer-search-input" placeholder="Search by Customer ID (e.g., CUST-9842, 7590)..." />
-          </div>
-
-          <div class="toolbar-filters">
-            <!-- Risk Tier Filter -->
-            <div class="filter-group">
-              <label>Risk Level:</label>
-              <div class="segmented-control" id="filter-risk-tier">
-                <button class="seg-btn active" data-tier="">All</button>
-                <button class="seg-btn critical" data-tier="Critical">Critical</button>
-                <button class="seg-btn red" data-tier="High">High</button>
-                <button class="seg-btn amber" data-tier="Medium">Medium</button>
-                <button class="seg-btn green" data-tier="Low">Low</button>
-              </div>
-            </div>
-
-            <!-- Subscription Plan Filter -->
-            <div class="filter-group">
-              <label>Plan:</label>
-              <select id="filter-contract-type" class="custom-select">
-                <option value="">All Plans</option>
-                <option value="Basic">Basic Plan</option>
-                <option value="Standard">Standard Plan</option>
-                <option value="Premium">Premium Plan</option>
-              </select>
-            </div>
-
-            <!-- Sorting -->
-            <div class="filter-group">
-              <label>Sort By:</label>
-              <select id="customer-sort-by" class="custom-select">
-                <option value="risk-desc">Highest Churn Risk</option>
-                <option value="risk-asc">Lowest Churn Risk</option>
-                <option value="price-desc">Highest Monthly Fee</option>
-                <option value="watch-desc">Most Watch Hours</option>
-              </select>
-            </div>
-
-            <button class="btn btn-secondary" id="btn-export-customers-csv" title="Export matching subscribers as CSV">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Table Container -->
-        <div class="table-card glass-card">
-          <div class="table-responsive">
-            <table class="data-table" id="customers-table">
-              <thead>
-                <tr>
-                  <th>Subscriber ID</th>
-                  <th>Plan</th>
-                  <th>Monthly Fee</th>
-                  <th>Watch Hours (30d)</th>
-                  <th>Days Since Stream</th>
-                  <th>Tickets</th>
-                  <th>Billing Declines</th>
-                  <th>Churn Probability</th>
-                  <th>Risk Tier</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="customers-table-body">
-                <tr>
-                  <td colspan="10" class="table-loading">Loading subscriber records...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Pagination -->
-          <div class="pagination-footer">
-            <div class="pagination-info" id="pagination-info">Showing 0 of 0 customers</div>
-            <div class="pagination-buttons">
-              <button class="btn btn-sm btn-secondary" id="btn-prev-page" disabled>&larr; Previous</button>
-              <span class="page-indicator" id="page-indicator">Page 1</span>
-              <button class="btn btn-sm btn-secondary" id="btn-next-page">Next &rarr;</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 3: INTERVENTIONS HUB -->
-      <section class="page-view" id="view-interventions">
-        <!-- Status chips -->
-        <div class="status-chips-row">
-          <div class="status-chip active" data-status="">
-            <span class="chip-count" id="chip-all-count">0</span>
-            <span class="chip-label">All Interventions</span>
-          </div>
-          <div class="status-chip yellow" data-status="Pending">
-            <span class="chip-count" id="chip-pending-count">0</span>
-            <span class="chip-label">Pending</span>
-          </div>
-          <div class="status-chip blue" data-status="Sent">
-            <span class="chip-count" id="chip-sent-count">0</span>
-            <span class="chip-label">Sent / Executed</span>
-          </div>
-          <div class="status-chip purple" data-status="Responded">
-            <span class="chip-count" id="chip-responded-count">0</span>
-            <span class="chip-label">Responded</span>
-          </div>
-          <div class="status-chip green" data-status="Resolved">
-            <span class="chip-count" id="chip-resolved-count">0</span>
-            <span class="chip-label">Resolved / Retained</span>
-          </div>
-        </div>
-
-        <!-- Filter bar -->
-        <div class="toolbar glass-card">
-          <div class="toolbar-search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="interventions-search-input" placeholder="Search customer ID or notes..." />
-          </div>
-
-            <div class="filter-group">
-              <label>Action Play:</label>
-              <select id="filter-intervention-action" class="custom-select">
-                <option value="">All Plays</option>
-                <option value="proactive_outreach">Proactive Outreach</option>
-                <option value="contract_upgrade_incentive">Contract Upgrade</option>
-                <option value="discount_offer">Discount Offer</option>
-                <option value="reengagement_email">Re-engagement Email</option>
-              </select>
-            </div>
-
-            <button class="btn btn-secondary" id="btn-export-interventions-csv" title="Export interventions log as CSV">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Interventions Table -->
-        <div class="table-card glass-card">
-          <div class="table-responsive">
-            <table class="data-table" id="interventions-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Customer</th>
-                  <th>Action Play</th>
-                  <th>Details & Offer</th>
-                  <th>Channel</th>
-                  <th>Status</th>
-                  <th>Agent / System</th>
-                  <th>Date</th>
-                  <th>Update</th>
-                </tr>
-              </thead>
-              <tbody id="interventions-table-body">
-                <tr>
-                  <td colspan="9" class="table-loading">Loading interventions...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 4: BATCH CSV UPLOAD -->
-      <section class="page-view" id="view-upload">
-        <div class="upload-container">
-          <div class="upload-hero glass-card">
-            <div class="upload-dropzone" id="upload-dropzone">
-              <div class="dropzone-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="17 8 12 3 7 8"></polyline>
-                  <line x1="12" y1="3" x2="12" y2="15"></line>
-                </svg>
-              </div>
-              <h3 class="dropzone-title">Upload Customer Batch CSV</h3>
-              <p class="dropzone-subtitle">Drag and drop your file here, or click to browse</p>
-              <input type="file" id="csv-file-input" accept=".csv" class="file-input-hidden" />
-              <button class="btn btn-primary" onclick="document.getElementById('csv-file-input').click()">Browse CSV File</button>
-              <div class="upload-specs">Supports standard Telco schema (tenure, monthly_charges, contract_type, support_tickets, etc.)</div>
-            </div>
-
-            <div class="upload-actions-bar">
-              <button class="btn btn-secondary btn-sm" id="btn-download-sample-csv">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                <span>Download Sample CSV Template</span>
+                <span>Predict Customer</span>
               </button>
             </div>
           </div>
 
-          <!-- Upload Progress & Preview Area (hidden until file chosen) -->
-          <div class="upload-preview-card glass-card" id="upload-preview-card" style="display: none;">
-            <div class="preview-header">
-              <div>
-                <h4 class="preview-filename" id="preview-filename">customers.csv</h4>
-                <p class="preview-meta" id="preview-meta">Detected 0 rows ready for scoring</p>
+          <!-- D. FOUR KPI CARDS (Single row on desktop) -->
+          <div class="kpi-row-grid">
+            <!-- 1. Total Customers -->
+            <div class="kpi-card">
+              <div class="kpi-card-inner">
+                <div class="kpi-text-col">
+                  <span class="kpi-label">Total Customers</span>
+                  <div class="kpi-value" id="kpi-total-customers">--</div>
+                  <div class="kpi-trend-note">
+                    <span class="trend-pill blue">Active Cohort</span>
+                    <span class="kpi-sub-desc">100% active subscribers</span>
+                  </div>
+                </div>
+                <div class="kpi-icon-tile icon-blue">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                </div>
               </div>
-              <button class="btn btn-primary" id="btn-execute-upload">Score Batch Now</button>
             </div>
 
-            <!-- Preview Table -->
-            <div class="table-responsive preview-table-wrap">
-              <table class="data-table" id="upload-preview-table">
-                <thead id="upload-preview-thead"></thead>
-                <tbody id="upload-preview-tbody"></tbody>
+            <!-- 2. High-Risk Customers -->
+            <div class="kpi-card">
+              <div class="kpi-card-inner">
+                <div class="kpi-text-col">
+                  <span class="kpi-label">High-Risk Customers</span>
+                  <div class="kpi-value text-coral" id="kpi-high-risk">--</div>
+                  <div class="kpi-trend-note">
+                    <span class="trend-pill coral" id="kpi-high-risk-badge">Action Req.</span>
+                    <span class="kpi-sub-desc" id="kpi-high-risk-desc">Critical & High risk</span>
+                  </div>
+                </div>
+                <div class="kpi-icon-tile icon-coral">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Monthly Revenue at Risk -->
+            <div class="kpi-card">
+              <div class="kpi-card-inner">
+                <div class="kpi-text-col">
+                  <span class="kpi-label">Monthly Revenue at Risk</span>
+                  <div class="kpi-value text-orange" id="kpi-revenue-at-risk">$--</div>
+                  <div class="kpi-trend-note">
+                    <span class="trend-pill orange">Monthly MRR</span>
+                    <span class="kpi-sub-desc" id="kpi-annual-revenue-subtext">Annualized: $--</span>
+                  </div>
+                </div>
+                <div class="kpi-icon-tile icon-orange">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Average Churn Probability -->
+            <div class="kpi-card">
+              <div class="kpi-card-inner">
+                <div class="kpi-text-col">
+                  <span class="kpi-label">Average Churn Probability</span>
+                  <div class="kpi-value text-purple" id="kpi-avg-churn-rate">--%</div>
+                  <div class="kpi-trend-note">
+                    <span class="trend-pill purple">Portfolio Avg</span>
+                    <span class="kpi-sub-desc">Target &lt; 35.0%</span>
+                  </div>
+                </div>
+                <div class="kpi-icon-tile icon-purple">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                    <polyline points="17 6 23 6 23 12"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- E. ANALYTICS SECTION (3 Columns) -->
+          <div class="analytics-three-col-grid">
+            <!-- LEFT CARD: Churn Risk Distribution (Donut) -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Churn Risk Distribution</h3>
+                  <p class="card-sub-title">Breakdown across 4 model risk tiers</p>
+                </div>
+                <span class="card-tag">Portfolio</span>
+              </div>
+              <div class="chart-box donut-box">
+                <canvas id="chart-risk-distribution"></canvas>
+              </div>
+              <div class="donut-custom-legend" id="donut-legend-stats">
+                <!-- Injected via JavaScript -->
+              </div>
+            </div>
+
+            <!-- MIDDLE CARD: Customer Behaviour Analysis (Line Chart) -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Customer Behaviour Analysis</h3>
+                  <p class="card-sub-title">Weekly churn risk & viewing engagement trend</p>
+                </div>
+                <span class="card-tag">6-Week Trend</span>
+              </div>
+              <div class="chart-box">
+                <canvas id="chart-behaviour-trend"></canvas>
+              </div>
+              <div class="behaviour-stats-footer" id="behaviour-supporting-stats">
+                <div class="b-stat-item">
+                  <span class="b-stat-lbl">Avg Watch Hours</span>
+                  <span class="b-stat-val" id="b-stat-watch">19.4 hrs</span>
+                </div>
+                <div class="b-stat-item">
+                  <span class="b-stat-lbl">Inactivity Days</span>
+                  <span class="b-stat-val" id="b-stat-inactivity">12.2 days</span>
+                </div>
+                <div class="b-stat-item">
+                  <span class="b-stat-lbl">Trial Convert</span>
+                  <span class="b-stat-val" id="b-stat-trial">74.8%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT CARD: Churn Probability Distribution (Bar Chart) -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Churn Probability Distribution</h3>
+                  <p class="card-sub-title">Subscriber distribution across probability ranges</p>
+                </div>
+                <span class="card-tag">Histogram</span>
+              </div>
+              <div class="chart-box">
+                <canvas id="chart-probability-distribution"></canvas>
+              </div>
+              <div class="prob-distribution-footer">
+                <div class="prob-range-chip"><span class="chip-dot" style="background:#10B981;"></span>0–20%</div>
+                <div class="prob-range-chip"><span class="chip-dot" style="background:#38BDF8;"></span>20–40%</div>
+                <div class="prob-range-chip"><span class="chip-dot" style="background:#8B5CF6;"></span>40–60%</div>
+                <div class="prob-range-chip"><span class="chip-dot" style="background:#FB923C;"></span>60–80%</div>
+                <div class="prob-range-chip"><span class="chip-dot" style="background:#F43F5E;"></span>80–100%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- UNDERNEATH: TWO HORIZONTAL PANELS -->
+          <div class="horizontal-panels-grid">
+            <!-- PANEL 1: Revenue at Risk Trend & Exposure -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Revenue at Risk Analysis</h3>
+                  <p class="card-sub-title">MRR vulnerability breakdown across subscription plans</p>
+                </div>
+                <div class="panel-metric-pill text-orange" id="panel-revenue-at-risk-pill">$-- at Risk</div>
+              </div>
+              <div class="revenue-panel-body">
+                <div class="revenue-chart-wrap">
+                  <canvas id="chart-revenue-risk"></canvas>
+                </div>
+                <div class="revenue-breakdown-details" id="panel-revenue-details">
+                  <!-- Dynamically rendered bars -->
+                </div>
+              </div>
+            </div>
+
+            <!-- PANEL 2: Customer Retention Trends -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Customer Retention Trends</h3>
+                  <p class="card-sub-title">Historical retention rate vs cumulative interventions</p>
+                </div>
+                <div class="panel-metric-pill text-purple" id="panel-retention-rate-pill">--% Retained</div>
+              </div>
+              <div class="retention-panel-body">
+                <div class="retention-chart-wrap">
+                  <canvas id="chart-retention-trends"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- F. RECENT CUSTOMERS TABLE (Full width dark table card) -->
+          <div class="saas-card full-width-card">
+            <div class="table-card-header">
+              <div class="table-title-group">
+                <h3 class="card-main-title">Recent Customers</h3>
+                <p class="card-sub-title">Latest scored subscriber accounts with recommended retention interventions</p>
+              </div>
+
+              <!-- Controls: Search, Risk-level Filter, Sorting -->
+              <div class="table-filter-controls">
+                <div class="search-input-wrap">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input type="text" id="recent-search-input" placeholder="Search customer ID..." />
+                </div>
+
+                <div class="risk-filter-pills" id="filter-recent-tier">
+                  <button class="filter-pill active" data-tier="">All</button>
+                  <button class="filter-pill pill-critical" data-tier="Critical">Critical</button>
+                  <button class="filter-pill pill-high" data-tier="High">High</button>
+                  <button class="filter-pill pill-moderate" data-tier="Medium">Moderate</button>
+                  <button class="filter-pill pill-low" data-tier="Low">Low</button>
+                </div>
+
+                <select id="recent-sort-by" class="saas-select-sm">
+                  <option value="risk-desc">Highest Churn Risk</option>
+                  <option value="risk-asc">Lowest Churn Risk</option>
+                  <option value="price-desc">Highest Monthly Fee</option>
+                  <option value="watch-desc">Most Watch Hours</option>
+                </select>
+
+                <button class="btn btn-xs btn-outline-purple" onclick="navigateTo('customers')">
+                  <span>View All in Directory &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-scroll-container">
+              <table class="saas-dark-table" id="recent-customers-table">
+                <thead>
+                  <tr>
+                    <th>Customer ID</th>
+                    <th>Tenure</th>
+                    <th>Contract / Plan</th>
+                    <th>Monthly Charges</th>
+                    <th>Churn Probability</th>
+                    <th>Risk Category</th>
+                    <th>Recommended Intervention</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-customers-tbody">
+                  <tr>
+                    <td colspan="8" class="table-loading-row">Loading subscriber records...</td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </div>
+        </section>
 
-          <!-- Batch Results Summary (hidden until scored) -->
-          <div class="batch-results-card glass-card" id="batch-results-card" style="display: none;">
-            <div class="batch-success-banner">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-              <div>
-                <h4 id="batch-results-title">Batch Scored Successfully</h4>
-                <p id="batch-results-subtitle">All customer profiles and churn risk drivers have been persisted.</p>
-              </div>
+        <!-- ==================================================================
+             VIEW 2: CUSTOMERS (Full Customer Directory)
+             ================================================================== -->
+        <section class="page-view" id="view-customers">
+          <div class="dashboard-header-block">
+            <div class="header-titles">
+              <h1 class="dashboard-title">Customer Directory</h1>
+              <p class="dashboard-subtitle">Search, filter, and inspect subscriber viewing activity and risk profiles.</p>
             </div>
-
-            <div class="batch-stats-grid">
-              <div class="batch-stat-item">
-                <span class="label">Total Scored</span>
-                <span class="value" id="batch-total-scored">0</span>
-              </div>
-              <div class="batch-stat-item red">
-                <span class="label">High Risk</span>
-                <span class="value" id="batch-high-risk">0</span>
-              </div>
-              <div class="batch-stat-item amber">
-                <span class="label">Medium Risk</span>
-                <span class="value" id="batch-medium-risk">0</span>
-              </div>
-              <div class="batch-stat-item green">
-                <span class="label">Low Risk</span>
-                <span class="value" id="batch-low-risk">0</span>
-              </div>
-              <div class="batch-stat-item">
-                <span class="label">Revenue at Risk</span>
-                <span class="value" id="batch-revenue-risk">$0</span>
-              </div>
-            </div>
-
-            <div class="batch-footer-actions">
-              <button class="btn btn-primary" onclick="navigateTo('customers')">View Scored Customers in Directory &rarr;</button>
+            <div class="header-actions">
+              <button class="btn btn-sm btn-outline-purple" id="btn-export-customers-csv" onclick="exportFilteredCustomersToCSV()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>Export CSV</span>
+              </button>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
+
+          <!-- Directory Filter Toolbar -->
+          <div class="saas-card toolbar-card">
+            <div class="toolbar-flex">
+              <div class="search-input-wrap flex-grow">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="customer-search-input" placeholder="Search by subscriber ID (e.g., OTT-20620, BATCH)..." />
+              </div>
+
+              <!-- Risk Filter -->
+              <div class="filter-field">
+                <span class="filter-label">Risk Level:</span>
+                <div class="risk-filter-pills" id="filter-risk-tier">
+                  <button class="filter-pill active" data-tier="">All</button>
+                  <button class="filter-pill pill-critical" data-tier="Critical">Critical</button>
+                  <button class="filter-pill pill-high" data-tier="High">High</button>
+                  <button class="filter-pill pill-moderate" data-tier="Medium">Moderate</button>
+                  <button class="filter-pill pill-low" data-tier="Low">Low</button>
+                </div>
+              </div>
+
+              <!-- Plan Filter -->
+              <div class="filter-field">
+                <span class="filter-label">Plan:</span>
+                <select id="filter-contract-type" class="saas-select-sm">
+                  <option value="">All Plans</option>
+                  <option value="Basic">Basic Plan</option>
+                  <option value="Standard">Standard Plan</option>
+                  <option value="Premium">Premium Plan</option>
+                </select>
+              </div>
+
+              <!-- Sort Filter -->
+              <div class="filter-field">
+                <span class="filter-label">Sort By:</span>
+                <select id="customer-sort-by" class="saas-select-sm">
+                  <option value="risk-desc">Highest Churn Risk</option>
+                  <option value="risk-asc">Lowest Churn Risk</option>
+                  <option value="price-desc">Highest Monthly Fee</option>
+                  <option value="watch-desc">Most Watch Hours</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Directory Table Card -->
+          <div class="saas-card full-width-card">
+            <div class="table-scroll-container">
+              <table class="saas-dark-table" id="customers-table">
+                <thead>
+                  <tr>
+                    <th>Subscriber ID</th>
+                    <th>Plan</th>
+                    <th>Monthly Fee</th>
+                    <th>Watch Hours (30d)</th>
+                    <th>Inactivity</th>
+                    <th>Tickets</th>
+                    <th>Declines</th>
+                    <th>Churn Probability</th>
+                    <th>Risk Category</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="customers-table-body">
+                  <tr>
+                    <td colspan="10" class="table-loading-row">Loading subscribers...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div class="table-pagination-bar">
+              <span class="pagination-info" id="pagination-info">Showing 0 of 0 subscribers</span>
+              <div class="pagination-btns">
+                <button class="btn btn-xs btn-ghost" id="btn-prev-page" disabled>&larr; Previous</button>
+                <span class="page-count" id="page-indicator">Page 1</span>
+                <button class="btn btn-xs btn-ghost" id="btn-next-page">Next &rarr;</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: PREDICT (Single Customer Predictor & What-If Analyzer)
+             ================================================================== -->
+        <section class="page-view" id="view-predict">
+          <div class="dashboard-header-block">
+            <div class="header-titles">
+              <h1 class="dashboard-title">Predict & What-If Scenario Analysis</h1>
+              <p class="dashboard-subtitle">Simulate subscriber profile attributes, compute ML churn probability, and generate SHAP risk drivers.</p>
+            </div>
+            <div class="header-actions">
+              <div class="preset-buttons">
+                <span class="preset-label">Test Presets:</span>
+                <button class="btn btn-xs btn-outline-coral" onclick="applyPreset('critical')">High Churner</button>
+                <button class="btn btn-xs btn-outline-purple" onclick="applyPreset('moderate')">Moderate Risk</button>
+                <button class="btn btn-xs btn-outline-green" onclick="applyPreset('loyal')">Loyal Subscriber</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="predict-layout-grid">
+            <!-- Left Form Card -->
+            <div class="saas-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Subscriber Attributes</h3>
+                  <p class="card-sub-title">Enter streaming profile parameters</p>
+                </div>
+              </div>
+
+              <form id="form-single-predict" onsubmit="handleSinglePredictSubmit(event)">
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label>Customer / Subscriber ID</label>
+                    <input type="text" id="pred-cust-id" class="saas-input" value="OTT-SCENARIO-01" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Subscription Plan</label>
+                    <select id="pred-plan" class="saas-input">
+                      <option value="Basic">Basic Plan ($8.99)</option>
+                      <option value="Standard" selected>Standard Plan ($14.99)</option>
+                      <option value="Premium">Premium Plan ($20.99)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label>Monthly Price ($)</label>
+                    <input type="number" id="pred-price" class="saas-input" step="0.01" value="14.99" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Tenure (Months)</label>
+                    <input type="number" id="pred-tenure" class="saas-input" min="1" max="120" value="4" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Free Trial Converted</label>
+                    <select id="pred-trial" class="saas-input">
+                      <option value="Yes" selected>Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label>Watch Hours (Last 30 Days)</label>
+                    <input type="number" id="pred-watch-hours" class="saas-input" step="0.1" value="6.5" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Days Since Last Stream</label>
+                    <input type="number" id="pred-days-inactive" class="saas-input" min="0" max="180" value="16" required />
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-group">
+                    <label>Customer Support Tickets</label>
+                    <input type="number" id="pred-tickets" class="saas-input" min="0" max="20" value="2" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Payment Failures (Last 90d)</label>
+                    <input type="number" id="pred-failures" class="saas-input" min="0" max="10" value="1" required />
+                  </div>
+                </div>
+
+                <div class="form-grid-3">
+                  <div class="form-group">
+                    <label>Devices</label>
+                    <input type="number" id="pred-devices" class="saas-input" min="1" max="10" value="2" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Profiles</label>
+                    <input type="number" id="pred-profiles" class="saas-input" min="1" max="10" value="2" required />
+                  </div>
+                  <div class="form-group">
+                    <label>Downloads (30d)</label>
+                    <input type="number" id="pred-downloads" class="saas-input" min="0" max="50" value="1" required />
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary-purple btn-block" id="btn-run-predict">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <span>Run Churn Prediction & Playbooks</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Right Results Card -->
+            <div class="saas-card" id="predict-results-card">
+              <div class="card-title-row">
+                <div>
+                  <h3 class="card-main-title">Prediction & Explainability Output</h3>
+                  <p class="card-sub-title">Real-time inference score & SHAP feature drivers</p>
+                </div>
+                <span class="risk-badge" id="predict-result-badge">Ready</span>
+              </div>
+
+              <!-- Score Summary Row -->
+              <div class="predict-score-summary">
+                <div class="score-circle-item">
+                  <span class="score-label">Churn Probability</span>
+                  <div class="score-val" id="predict-result-prob">--%</div>
+                  <div class="meter-bar-track">
+                    <div class="meter-bar-fill" id="predict-result-bar" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <div class="score-info-item">
+                  <span class="score-label">Risk Category</span>
+                  <div class="score-tier-name" id="predict-result-tier">--</div>
+                  <span class="score-sub" id="predict-result-recommendation">Run prediction to view retention plan</span>
+                </div>
+              </div>
+
+              <!-- SHAP Feature Attribution Chart -->
+              <div class="shap-chart-container">
+                <div class="shap-title-row">
+                  <span class="shap-chart-title">Feature Contribution Analysis (SHAP)</span>
+                  <span class="shap-legend-text"><span class="text-coral">&plus; Risk Factor</span> &bull; <span class="text-green">&minus; Protective Factor</span></span>
+                </div>
+                <div class="shap-canvas-wrap">
+                  <canvas id="chart-predict-shap"></canvas>
+                </div>
+              </div>
+
+              <!-- Recommended Interventions -->
+              <div class="predict-interventions-section">
+                <span class="playbook-sec-title">Recommended Retention Playbook:</span>
+                <div class="playbook-cards-wrap" id="predict-playbooks-wrap">
+                  <p class="text-muted">Enter attributes and click Predict to generate playbooks.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 4: BATCH SCORE (Bulk CSV Upload)
+             ================================================================== -->
+        <section class="page-view" id="view-batch">
+          <div class="dashboard-header-block">
+            <div class="header-titles">
+              <h1 class="dashboard-title">Batch CSV Scoring</h1>
+              <p class="dashboard-subtitle">Ingest customer datasets and score entire cohorts through the ML pipeline.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-sm btn-outline-purple" id="btn-download-sample-csv" onclick="downloadSampleCSV()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>Download Sample CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="batch-upload-layout">
+            <!-- Dropzone Card -->
+            <div class="saas-card dropzone-card">
+              <div class="upload-dropzone" id="upload-dropzone">
+                <div class="dropzone-icon-box">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <h3 class="dropzone-heading">Drag and drop your subscriber CSV file here</h3>
+                <p class="dropzone-sub">or click below to choose a file from your computer</p>
+                <input type="file" id="csv-file-input" accept=".csv" class="hidden-input" onchange="handleFileSelect(event)" />
+                <button class="btn btn-sm btn-primary-purple" onclick="document.getElementById('csv-file-input').click()">Browse CSV File</button>
+                <span class="dropzone-hint">Compatible with OTT streaming columns (tenure, monthly_price, watch_hours_last_30_days, etc.)</span>
+              </div>
+            </div>
+
+            <!-- Preview Card -->
+            <div class="saas-card preview-card" id="upload-preview-card" style="display: none;">
+              <div class="card-title-row">
+                <div>
+                  <h4 class="card-main-title" id="preview-filename">subscribers.csv</h4>
+                  <p class="card-sub-title" id="preview-meta">0 records ready for evaluation</p>
+                </div>
+                <button class="btn btn-sm btn-primary-purple" id="btn-execute-upload" onclick="executeBatchUpload()">
+                  <span>Score Batch Now &rarr;</span>
+                </button>
+              </div>
+
+              <div class="table-scroll-container">
+                <table class="saas-dark-table" id="upload-preview-table">
+                  <thead id="upload-preview-thead"></thead>
+                  <tbody id="upload-preview-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Batch Results Card -->
+            <div class="saas-card results-card" id="batch-results-card" style="display: none;">
+              <div class="card-title-row">
+                <div class="success-title-flex">
+                  <span class="success-icon-badge">&#10003;</span>
+                  <div>
+                    <h4 class="card-main-title">Batch Scoring Complete</h4>
+                    <p class="card-sub-title">All subscriber profiles have been evaluated and persisted to database.</p>
+                  </div>
+                </div>
+                <button class="btn btn-xs btn-outline-purple" onclick="navigateTo('customers')">View Customers Directory &rarr;</button>
+              </div>
+
+              <div class="batch-metrics-row">
+                <div class="batch-metric-box">
+                  <span class="bm-label">Total Scored</span>
+                  <span class="bm-val" id="batch-total-scored">0</span>
+                </div>
+                <div class="batch-metric-box coral">
+                  <span class="bm-label">Critical & High</span>
+                  <span class="bm-val" id="batch-high-risk">0</span>
+                </div>
+                <div class="batch-metric-box purple">
+                  <span class="bm-label">Moderate Risk</span>
+                  <span class="bm-val" id="batch-medium-risk">0</span>
+                </div>
+                <div class="batch-metric-box green">
+                  <span class="bm-label">Low Risk</span>
+                  <span class="bm-val" id="batch-low-risk">0</span>
+                </div>
+                <div class="batch-metric-box orange">
+                  <span class="bm-label">Revenue at Risk</span>
+                  <span class="bm-val" id="batch-revenue-risk">$0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 5: INTERVENTIONS (Retention Interventions Hub)
+             ================================================================== -->
+        <section class="page-view" id="view-interventions">
+          <div class="dashboard-header-block">
+            <div class="header-titles">
+              <h1 class="dashboard-title">Interventions Hub</h1>
+              <p class="dashboard-subtitle">Track, execute, and monitor automated and manual subscriber retention actions.</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-sm btn-primary-purple" onclick="openLogInterventionModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>+ Log New Intervention</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Status Chips Row -->
+          <div class="status-summary-chips">
+            <div class="status-chip active" data-status="" onclick="filterInterventionsByStatus('')">
+              <span class="chip-count" id="chip-all-count">0</span>
+              <span class="chip-label">All Interventions</span>
+            </div>
+            <div class="status-chip chip-yellow" data-status="Pending" onclick="filterInterventionsByStatus('Pending')">
+              <span class="chip-count" id="chip-pending-count">0</span>
+              <span class="chip-label">Pending</span>
+            </div>
+            <div class="status-chip chip-blue" data-status="Sent" onclick="filterInterventionsByStatus('Sent')">
+              <span class="chip-count" id="chip-sent-count">0</span>
+              <span class="chip-label">Sent / Executed</span>
+            </div>
+            <div class="status-chip chip-purple" data-status="Responded" onclick="filterInterventionsByStatus('Responded')">
+              <span class="chip-count" id="chip-responded-count">0</span>
+              <span class="chip-label">Responded</span>
+            </div>
+            <div class="status-chip chip-green" data-status="Resolved" onclick="filterInterventionsByStatus('Resolved')">
+              <span class="chip-count" id="chip-resolved-count">0</span>
+              <span class="chip-label">Resolved / Retained</span>
+            </div>
+          </div>
+
+          <!-- Interventions Table Card -->
+          <div class="saas-card full-width-card">
+            <div class="table-card-header">
+              <div class="search-input-wrap flex-grow">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="interventions-search-input" placeholder="Search by customer ID or notes..." oninput="filterInterventionsSearch(event)" />
+              </div>
+
+              <select id="filter-intervention-action" class="saas-select-sm" onchange="filterInterventionsAction(event)">
+                <option value="">All Retention Plays</option>
+                <option value="proactive_billing_support">Billing Support & Grace</option>
+                <option value="pause_subscription_offer">Pause Subscription Hold</option>
+                <option value="personalized_content_discovery">Personalized Content Watchlist</option>
+                <option value="annual_discount_retention">Annual Discount Upgrade</option>
+                <option value="streaming_quality_concierge">Streaming Concierge Support</option>
+              </select>
+            </div>
+
+            <div class="table-scroll-container">
+              <table class="saas-dark-table" id="interventions-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Customer ID</th>
+                    <th>Action Play</th>
+                    <th>Details & Offer</th>
+                    <th>Channel</th>
+                    <th>Status</th>
+                    <th>Logged By</th>
+                    <th>Date</th>
+                    <th class="text-right">Update Status</th>
+                  </tr>
+                </thead>
+                <tbody id="interventions-table-body">
+                  <tr>
+                    <td colspan="9" class="table-loading-row">Loading interventions...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
 
-  <!-- MODAL: CUSTOMER 360 DETAIL VIEW -->
-  <div class="modal-backdrop" id="modal-customer-detail">
-    <div class="modal-drawer">
+  <!-- ====================================================================
+       MODAL 1: CUSTOMER 360 DRAWER VIEW
+       ==================================================================== -->
+  <div class="modal-overlay" id="modal-customer-detail">
+    <div class="customer-drawer">
       <div class="drawer-header">
         <div class="drawer-title-group">
-          <span class="drawer-sub">Customer 360 Deep-Dive</span>
-          <h2 class="drawer-cust-id" id="detail-cust-id">CUST-XXXX</h2>
+          <span class="drawer-sub">Customer 360 Profile</span>
+          <h2 class="drawer-cust-id" id="detail-cust-id">OTT-XXXX</h2>
         </div>
-        <div class="drawer-actions">
+        <div class="drawer-actions-header">
           <span class="risk-badge" id="detail-risk-badge">High Risk</span>
-          <button class="modal-close-btn" onclick="closeModal('modal-customer-detail')">&times;</button>
+          <button class="drawer-close-btn" onclick="closeModal('modal-customer-detail')">&times;</button>
         </div>
       </div>
 
       <div class="drawer-body">
-        <!-- Top Summary Cards -->
-        <div class="detail-summary-grid">
-          <div class="detail-metric-box">
-            <span class="lbl">Churn Probability</span>
-            <span class="val danger" id="detail-prob-val">0.0%</span>
-            <div class="meter-bar-wrap">
-              <div class="meter-bar-fill" id="detail-meter-fill" style="width: 0%"></div>
+        <!-- 4 Metrics Boxes -->
+        <div class="drawer-metrics-grid">
+          <div class="d-metric-card">
+            <span class="d-lbl">Churn Probability</span>
+            <span class="d-val text-coral" id="detail-prob-val">0.0%</span>
+            <div class="meter-bar-track">
+              <div class="meter-bar-fill" id="detail-meter-fill" style="width: 0%;"></div>
             </div>
           </div>
-
-          <div class="detail-metric-box">
-            <span class="lbl">Subscription Plan</span>
-            <span class="val" id="detail-contract-val">--</span>
-            <span class="sub" id="detail-tenure-val">Tenure: -- mos</span>
+          <div class="d-metric-card">
+            <span class="d-lbl">Subscription Plan</span>
+            <span class="d-val" id="detail-contract-val">--</span>
+            <span class="d-sub" id="detail-tenure-val">Tenure: -- mos</span>
           </div>
-
-          <div class="detail-metric-box">
-            <span class="lbl">Monthly Price</span>
-            <span class="val" id="detail-monthly-val">$--</span>
-            <span class="sub" id="detail-total-val">Downloads: --</span>
+          <div class="d-metric-card">
+            <span class="d-lbl">Monthly Charges</span>
+            <span class="d-val text-orange" id="detail-monthly-val">$--</span>
+            <span class="d-sub" id="detail-total-val">Downloads: --</span>
           </div>
-
-          <div class="detail-metric-box">
-            <span class="lbl">Streaming Activity</span>
-            <span class="val" id="detail-tickets-val">-- hrs (30d)</span>
-            <span class="sub" id="detail-last-active-val">Last streamed: -- days ago</span>
+          <div class="d-metric-card">
+            <span class="d-lbl">Streaming Activity</span>
+            <span class="d-val text-blue" id="detail-tickets-val">-- hrs</span>
+            <span class="d-sub" id="detail-last-active-val">Last watch: --</span>
           </div>
         </div>
 
-        <!-- Two Column Deep Dive -->
-        <div class="detail-main-columns">
-          <!-- Left: SHAP Feature Importance Breakdown -->
-          <div class="detail-col glass-subcard">
-            <h4 class="col-title">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="20" x2="18" y2="10"></line>
-                <line x1="12" y1="20" x2="12" y2="4"></line>
-                <line x1="6" y1="20" x2="6" y2="14"></line>
+        <!-- Two Column Deep Dive: SHAP vs Playbooks -->
+        <div class="drawer-deepdive-grid">
+          <!-- Left: SHAP Drivers -->
+          <div class="deepdive-col">
+            <h4 class="col-head-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="20" x2="18" y2="10"/>
+                <line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/>
               </svg>
               <span>Feature Contribution Analysis (SHAP)</span>
             </h4>
-            <p class="col-desc">Key drivers pushing churn probability <strong class="text-danger">UP (+)</strong> vs protective retention factors pulling it <strong class="text-success">DOWN (-)</strong>.</p>
-            <div class="chart-wrapper shap-chart-wrap">
+            <p class="col-head-sub">Top factors driving churn probability higher (+) vs protective factors reducing it (-).</p>
+            <div class="shap-chart-box">
               <canvas id="chart-shap-breakdown"></canvas>
             </div>
-            <div class="explanation-box" id="detail-explanation-summary">
-              Analyzing risk factors...
+            <div class="explanation-callout" id="detail-explanation-summary">
+              Evaluating risk drivers...
             </div>
           </div>
 
-          <!-- Right: Recommended Retention Playbook & Actions -->
-          <div class="detail-col glass-subcard">
-            <div class="playbook-header">
-              <h4 class="col-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <!-- Right: Playbooks & Timeline -->
+          <div class="deepdive-col">
+            <div class="playbook-head-row">
+              <h4 class="col-head-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
-                <span>Rule-Based Retention Playbook</span>
+                <span>Retention Playbook Recommendations</span>
               </h4>
-              <button class="btn btn-sm btn-primary" id="btn-trigger-action-modal">
-                <span>+ Log Intervention</span>
-              </button>
+              <button class="btn btn-xs btn-primary-purple" onclick="openLogInterventionForCurrent()">+ Log Action</button>
             </div>
 
-            <!-- Suggested Interventions Cards Container -->
-            <div class="suggestions-list" id="detail-suggestions-container">
-              <!-- Dynamically rendered -->
+            <div class="drawer-suggestions-list" id="detail-suggestions-container">
+              <!-- Dynamically populated -->
             </div>
 
-            <!-- Past Intervention History for this customer -->
-            <div class="customer-history-section">
-              <h5 class="history-title">Intervention History Timeline</h5>
-              <div class="timeline-container" id="detail-timeline-container">
-                <p class="empty-timeline">No interventions logged yet for this customer.</p>
+            <div class="timeline-section">
+              <h5 class="timeline-title">Intervention History Timeline</h5>
+              <div class="timeline-track" id="detail-timeline-container">
+                <p class="text-muted">No interventions logged yet.</p>
               </div>
             </div>
           </div>
@@ -652,48 +1047,49 @@
     </div>
   </div>
 
-  <!-- MODAL: LOG NEW INTERVENTION -->
-  <div class="modal-backdrop" id="modal-log-intervention">
-    <div class="modal-dialog">
+  <!-- ====================================================================
+       MODAL 2: LOG NEW INTERVENTION MODAL
+       ==================================================================== -->
+  <div class="modal-overlay" id="modal-log-intervention">
+    <div class="modal-dialog-box">
       <div class="dialog-header">
         <h3 class="dialog-title">Log Retention Intervention</h3>
-        <button class="modal-close-btn" onclick="closeModal('modal-log-intervention')">&times;</button>
+        <button class="dialog-close-btn" onclick="closeModal('modal-log-intervention')">&times;</button>
       </div>
 
-      <form id="form-log-intervention" class="dialog-form">
+      <form id="form-log-intervention" onsubmit="handleLogInterventionSubmit(event)">
         <input type="hidden" id="intervene-cust-id" />
 
         <div class="form-group">
-          <label>Target Customer ID</label>
-          <input type="text" id="intervene-cust-id-display" class="form-input" disabled />
+          <label>Target Subscriber ID</label>
+          <input type="text" id="intervene-cust-id-display" class="saas-input" required placeholder="e.g. OTT-20620" />
         </div>
 
         <div class="form-group">
           <label>Action Type Play</label>
-          <select id="intervene-action-type" class="form-input" required>
-            <option value="proactive_outreach">Proactive VIP Outreach (Phone escalation)</option>
-            <option value="contract_upgrade_incentive">Contract Upgrade Incentive (Annual discount)</option>
-            <option value="discount_offer">Targeted Loyalty Discount (Statement credit)</option>
-            <option value="reengagement_email">Re-engagement Email Campaign (Drip)</option>
-            <option value="onboarding_concierge">Onboarding Concierge Support</option>
+          <select id="intervene-action-type" class="saas-input" required>
+            <option value="proactive_billing_support">Proactive Billing Support & 1-Click Grace</option>
+            <option value="pause_subscription_offer">Pause Subscription Offer (1–3 Months Free Hold)</option>
+            <option value="personalized_content_discovery">Personalized Content Watchlist & Drip</option>
+            <option value="annual_discount_retention">Annual Discount Upgrade Incentive</option>
+            <option value="streaming_quality_concierge">Streaming Quality VIP Concierge</option>
           </select>
         </div>
 
-        <div class="form-row">
-          <div class="form-group flex-1">
+        <div class="form-grid-2">
+          <div class="form-group">
             <label>Communication Channel</label>
-            <select id="intervene-channel" class="form-input">
-              <option value="phone">Phone Call</option>
+            <select id="intervene-channel" class="saas-input">
+              <option value="in_app">In-App Notification / Modal</option>
               <option value="email">Email</option>
-              <option value="in_app">In-App Notification</option>
-              <option value="sms">SMS Text</option>
+              <option value="phone">Phone Support Call</option>
+              <option value="sms">SMS Notification</option>
             </select>
           </div>
-
-          <div class="form-group flex-1">
-            <label>Current Status</label>
-            <select id="intervene-status" class="form-input">
-              <option value="Sent">Sent / Executed</option>
+          <div class="form-group">
+            <label>Initial Status</label>
+            <select id="intervene-status" class="saas-input">
+              <option value="Sent" selected>Sent / Executed</option>
               <option value="Pending">Pending</option>
               <option value="Responded">Responded</option>
               <option value="Resolved">Resolved</option>
@@ -702,96 +1098,18 @@
         </div>
 
         <div class="form-group">
-          <label>Offer & Terms Details</label>
-          <textarea id="intervene-details" class="form-textarea" rows="3" required placeholder="Describe the specific offer, credit amount, or troubleshooting terms provided..."></textarea>
+          <label>Offer Details & Terms</label>
+          <textarea id="intervene-details" class="saas-textarea" rows="3" required placeholder="Describe specific terms, credit duration, or watch suggestions..."></textarea>
         </div>
 
         <div class="form-group">
-          <label>Agent / Internal Notes (Optional)</label>
-          <input type="text" id="intervene-notes" class="form-input" placeholder="Customer sentiment, scheduled follow-up, etc." />
+          <label>Notes (Optional)</label>
+          <input type="text" id="intervene-notes" class="saas-input" placeholder="Customer sentiment, agent notes..." />
         </div>
 
-        <div class="form-group">
-          <label>Logged By</label>
-          <input type="text" id="intervene-agent" class="form-input" value="Senior Retention Lead" />
-        </div>
-
-        <div class="dialog-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-log-intervention')">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-intervention">Save & Log Action</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: QUICK SCORE SINGLE CUSTOMER (WHAT-IF SCENARIO) -->
-  <div class="modal-backdrop" id="modal-quick-score">
-    <div class="modal-dialog">
-      <div class="dialog-header">
-        <h3 class="dialog-title">Score Customer Features</h3>
-        <button class="modal-close-btn" onclick="closeModal('modal-quick-score')">&times;</button>
-      </div>
-
-      <form id="form-quick-score" class="dialog-form">
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label>Customer ID</label>
-            <input type="text" id="quick-cust-id" class="form-input" placeholder="e.g. CUST-TEST-1" />
-          </div>
-          <div class="form-group flex-1">
-            <label>Tenure (Months)</label>
-            <input type="number" id="quick-tenure" class="form-input" value="3" min="0" max="72" required />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label>Monthly Charges ($)</label>
-            <input type="number" id="quick-monthly" class="form-input" value="95.50" step="0.5" required />
-          </div>
-          <div class="form-group flex-1">
-            <label>Contract Type</label>
-            <select id="quick-contract" class="form-input">
-              <option value="Month-to-month" selected>Month-to-month</option>
-              <option value="One year">One year</option>
-              <option value="Two year">Two year</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label>Support Tickets (Last 6 Mos)</label>
-            <input type="number" id="quick-tickets" class="form-input" value="4" min="0" max="20" required />
-          </div>
-          <div class="form-group flex-1">
-            <label>Last Login (Days Ago)</label>
-            <input type="number" id="quick-login" class="form-input" value="32" min="0" max="180" required />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group flex-1">
-            <label>Internet Service</label>
-            <select id="quick-internet" class="form-input">
-              <option value="Fiber optic" selected>Fiber optic</option>
-              <option value="DSL">DSL</option>
-              <option value="No">No Internet</option>
-            </select>
-          </div>
-          <div class="form-group flex-1">
-            <label>Usage Frequency</label>
-            <select id="quick-usage" class="form-input">
-              <option value="Rarely" selected>Rarely</option>
-              <option value="Weekly">Weekly</option>
-              <option value="Daily">Daily</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="dialog-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-quick-score')">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-quick-score">Predict Churn & Interventions</button>
+        <div class="dialog-actions-row">
+          <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal('modal-log-intervention')">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary-purple" id="btn-submit-intervention">Save & Execute Action</button>
         </div>
       </form>
     </div>
