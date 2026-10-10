@@ -11,19 +11,13 @@ venv/
 ENV/
 env/
 
-# Binaries & Redistributables
+# Local Utilities
 cloudflared.exe
-redist/
-licenses/
-readmes/
-*.exe
-*.dll
 
 # Database locks / temp
 *.db-journal
 *.db-wal
 *.db-shm
-
 
 # IDE / OS
 .DS_Store
