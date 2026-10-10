@@ -10,4 +10,3 @@ if app_dir not in sys.path:
 if base_dir not in sys.path:
     sys.path.insert(0, base_dir)
 
-from main import app
