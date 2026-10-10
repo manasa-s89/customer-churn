@@ -11,16 +11,23 @@ venv/
 ENV/
 env/
 
-# Binaries
+# Binaries & Redistributables
 cloudflared.exe
+redist/
+licenses/
+readmes/
+*.exe
+*.dll
 
 # Database locks / temp
 *.db-journal
 *.db-wal
 *.db-shm
 
+
 # IDE / OS
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+.vercel/

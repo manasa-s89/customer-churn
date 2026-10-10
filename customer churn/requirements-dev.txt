@@ -1,0 +1,5 @@
+# Development, offline model training, and experiment dependencies
+-r requirements.txt
+xgboost>=2.0.0
+shap>=0.44.0
+matplotlib>=3.8.0

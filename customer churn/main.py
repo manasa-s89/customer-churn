@@ -112,7 +112,8 @@ def get_explainer():
     if _explainer_instance is None:
         try:
             from predict_and_explain import ChurnExplainer
-            _explainer_instance = ChurnExplainer(models_dir="models")
+            models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+            _explainer_instance = ChurnExplainer(models_dir=models_dir)
         except Exception as e:
             print(f"[!] ChurnExplainer warning: {e}. Checking if fallback needed.")
             _explainer_instance = None

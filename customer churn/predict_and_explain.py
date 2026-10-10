@@ -22,7 +22,15 @@ HAS_SHAP = None
 class ChurnExplainer:
     """Explainer for individual OTT subscriber churn predictions."""
 
-    def __init__(self, models_dir: str = "models"):
+    def __init__(self, models_dir: str = None):
+        if models_dir is None:
+            models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+        elif not os.path.isabs(models_dir) and not os.path.exists(models_dir):
+            # Check relative to this file's folder
+            alt_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), models_dir)
+            if os.path.exists(alt_path):
+                models_dir = alt_path
+
         self.models_dir = models_dir
         self.preprocessor_path = os.path.join(models_dir, "preprocessing_pipeline.joblib")
         self.model_path = os.path.join(models_dir, "best_model.joblib")
