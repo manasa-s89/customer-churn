@@ -20,6 +20,9 @@ cloudflared.exe
 *.exe
 *.dll
 
+# Duplicate nested API directory
+api/
+
 # Offline Training, Evaluation & Inspection Scripts
 train.py
 generate_data.py

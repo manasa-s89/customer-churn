@@ -1,6 +1,6 @@
 # ==============================================================================
 # Vercel Deployment Ignore Configuration
-# Prevents development artifacts and large binaries from bloating function bundle
+# Prevents development artifacts, large binaries, and duplicate functions
 # ==============================================================================
 
 # Virtual Environments (Local environment is 711+ MB)
@@ -23,6 +23,9 @@ licenses/
 readmes/
 *.exe
 *.dll
+
+# Duplicate nested API directory (prevents building a second 476MB serverless function)
+customer churn/api/
 
 # Development & Offline Scripts (not needed by FastAPI runtime)
 customer churn/train.py
