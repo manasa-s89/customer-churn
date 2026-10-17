@@ -1,4 +1,10 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**/*.py": {
+      "excludeFiles": "{.venv/**,venv/**,**/__pycache__/**,**/*.pyc,**/test_*.py,**/*_test.py,**/tests/**,cloudflared.exe,redist/**,licenses/**,readmes/**,customer churn/train.py,customer churn/generate_data.py,customer churn/fast_seed.py,customer churn/seed_customers.py,customer churn/evaluate_pipeline.py,customer churn/inspect_*.py,customer churn/check_dates.py,customer churn/run_*.py}"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

@@ -25,8 +25,8 @@ from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import desc, func, text
 
 from database import engine, get_db, init_db, DATABASE_URL
 import models_db
@@ -349,14 +349,11 @@ def _process_single_prediction(customer: CustomerInput, db: Session) -> PredictR
 # =============================================================================
 
 @app.get("/health", tags=["Health"])
-def health_check():
+def health_check(db: Session = Depends(get_db)):
     """Verify backend API health, database connectivity, and model artifact status."""
     db_status = "connected"
     try:
-        from database import SessionLocal
-        db = SessionLocal()
-        db.execute(func.now()) if hasattr(func, "now") else None
-        db.close()
+        db.execute(text("SELECT 1"))
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
 
@@ -427,7 +424,10 @@ def list_customers(
 ):
     """List subscribers with latest churn scores, risk tiers, and filters."""
     plan_filter = subscription_plan or contract_type
-    query = db.query(models_db.CustomerRecord)
+    query = db.query(models_db.CustomerRecord).options(
+        selectinload(models_db.CustomerRecord.scores),
+        selectinload(models_db.CustomerRecord.interventions)
+    )
 
     if plan_filter:
         query = query.filter(models_db.CustomerRecord.subscription_plan.ilike(plan_filter.strip()))
@@ -596,8 +596,18 @@ def get_analytics_overview(db: Session = Depends(get_db)):
     Overview KPIs: Total subscribers, 4-tier risk distribution (Critical, High, Medium, Low),
     revenue at risk, and subscription plan breakdowns.
     """
-    customers = db.query(models_db.CustomerRecord).all()
-    total_customers = len(customers)
+    sql = """
+    WITH latest_scores AS (
+        SELECT customer_id, churn_probability, risk_tier,
+               ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY created_at DESC) as rn
+        FROM churn_scores
+    )
+    SELECT c.subscription_plan, c.monthly_price, s.churn_probability, s.risk_tier
+    FROM customers c
+    LEFT JOIN latest_scores s ON c.customer_id = s.customer_id AND s.rn = 1
+    """
+    rows = db.execute(text(sql)).fetchall()
+    total_customers = len(rows)
 
     if total_customers == 0:
         return AnalyticsOverviewResponse(
@@ -635,15 +645,14 @@ def get_analytics_overview(db: Session = Depends(get_db)):
         "Other": {"Critical": 0, "High": 0, "Moderate": 0, "Medium": 0, "Low": 0},
     }
 
-    for c in customers:
-        price = (c.monthly_price or 8.99)
+    for plan, price, prob, tier in rows:
+        price = (price or 8.99)
         total_monthly_revenue += price
-        latest_score = c.scores[0] if c.scores else None
-        tier = latest_score.risk_tier if latest_score and latest_score.risk_tier else "Moderate"
-        prob = latest_score.churn_probability if latest_score and latest_score.churn_probability is not None else 0.35
+        tier = tier if tier else "Moderate"
+        prob = prob if prob is not None else 0.35
         total_prob += prob
 
-        plan_key = c.subscription_plan if c.subscription_plan in plan_distribution else "Other"
+        plan_key = plan if plan in plan_distribution else "Other"
 
         if tier == "Critical":
             critical_risk_count += 1

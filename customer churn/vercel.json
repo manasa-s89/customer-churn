@@ -1,8 +1,8 @@
-﻿{
+{
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/**/*.py": {
-      "excludeFiles": "{.venv/**,**/__pycache__/**,**/*.pyc,**/test_*.py,**/*_test.py,**/tests/**,**/testdata/**,cloudflared.exe}"
+      "excludeFiles": "{.venv/**,venv/**,**/__pycache__/**,**/*.pyc,**/test_*.py,**/*_test.py,**/tests/**,cloudflared.exe,redist/**,licenses/**,readmes/**,train.py,generate_data.py,fast_seed.py,seed_customers.py,evaluate_pipeline.py,inspect_*.py,check_dates.py,run_*.py}"
     }
   },
   "rewrites": [

@@ -1,0 +1,56 @@
+# ==============================================================================
+# Vercel Deployment Ignore Configuration
+# Prevents development artifacts and large binaries from bloating function bundle
+# ==============================================================================
+
+# Virtual Environments (Local environment is 711+ MB)
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache and Compiled Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Large Binaries & Windows Installers
+cloudflared.exe
+redist/
+licenses/
+readmes/
+*.exe
+*.dll
+
+# Development & Offline Scripts (not needed by FastAPI runtime)
+customer churn/train.py
+customer churn/generate_data.py
+customer churn/fast_seed.py
+customer churn/seed_customers.py
+customer churn/evaluate_pipeline.py
+customer churn/inspect_db.py
+customer churn/inspect_model.py
+customer churn/check_dates.py
+customer churn/requirements-dev.txt
+
+# Test Suites & Test Runners
+customer churn/run_all_tests.py
+customer churn/run_tests.py
+customer churn/test_api.py
+customer churn/test_api_endpoints.py
+customer churn/test_live_event_demo.py
+customer churn/test_preprocessing.py
+customer churn/test_*.py
+
+# Container & Shell Scripts
+customer churn/Dockerfile
+customer churn/docker-compose.yml
+customer churn/start_app.bat
+
+# Version Control & IDE
+.git/
+.github/
+.vscode/
+.idea/

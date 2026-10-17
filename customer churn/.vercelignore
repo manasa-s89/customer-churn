@@ -1,0 +1,52 @@
+# ==============================================================================
+# Vercel Deployment Ignore Configuration (customer churn subdirectory)
+# ==============================================================================
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python Cache and Compiled Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Large Binaries & Local Utilities
+cloudflared.exe
+*.exe
+*.dll
+
+# Offline Training, Evaluation & Inspection Scripts
+train.py
+generate_data.py
+fast_seed.py
+seed_customers.py
+evaluate_pipeline.py
+inspect_db.py
+inspect_model.py
+check_dates.py
+requirements-dev.txt
+
+# Test Suites
+run_all_tests.py
+run_tests.py
+test_api.py
+test_api_endpoints.py
+test_live_event_demo.py
+test_preprocessing.py
+test_*.py
+
+# Container & Shell Scripts
+Dockerfile
+docker-compose.yml
+start_app.bat
+
+# Version Control & IDE
+.git/
+.github/
+.vscode/
+.idea/

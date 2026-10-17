@@ -16,26 +16,51 @@ if not DATABASE_URL:
 
     if os.getenv("VERCEL"):
         # Vercel serverless functions have a read-only root filesystem; only /tmp is writable
-        tmp_db_path = "/tmp/churn.db"
-        if not os.path.exists(tmp_db_path) and os.path.exists(default_db_path):
-            import shutil
-            try:
-                shutil.copy2(default_db_path, tmp_db_path)
-            except Exception as e:
-                print(f"[!] Note: Could not copy seed db to /tmp: {e}")
-        DATABASE_URL = f"sqlite:///{tmp_db_path}"
+        import tempfile
+        import shutil
+
+        tmp_dir = tempfile.gettempdir()
+        tmp_db_path = os.path.join(tmp_dir, "churn.db")
+
+        # Locate seed churn.db across potential root/subfolder working directories
+        candidate_seed_paths = [
+            default_db_path,
+            os.path.join(os.getcwd(), "customer churn", "churn.db"),
+            os.path.join(os.getcwd(), "churn.db")
+        ]
+
+        if not os.path.exists(tmp_db_path):
+            for seed_path in candidate_seed_paths:
+                if os.path.exists(seed_path):
+                    try:
+                        shutil.copy2(seed_path, tmp_db_path)
+                        break
+                    except Exception as e:
+                        print(f"[!] Note: Could not copy seed db from {seed_path} to {tmp_db_path}: {e}")
+
+        # Format URL with forward slashes for cross-platform SQLite URL compatibility
+        clean_tmp_path = tmp_db_path.replace("\\", "/")
+        DATABASE_URL = f"sqlite:///{clean_tmp_path}"
     else:
-        DATABASE_URL = f"sqlite:///{default_db_path}"
+        clean_default_path = default_db_path.replace("\\", "/")
+        DATABASE_URL = f"sqlite:///{clean_default_path}"
+
+from sqlalchemy.pool import NullPool
 
 # SQLite requires 'check_same_thread': False for multithreaded FastAPI access
 connect_args = {}
+engine_kwargs = {"echo": False}
 if DATABASE_URL.startswith("sqlite"):
     connect_args["check_same_thread"] = False
+    engine_kwargs["connect_args"] = connect_args
+    engine_kwargs["poolclass"] = NullPool
+else:
+    engine_kwargs["pool_size"] = 20
+    engine_kwargs["max_overflow"] = 30
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args,
-    echo=False
+    **engine_kwargs
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
