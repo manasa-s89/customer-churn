@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 30,
+      "excludeFiles": "{redist/**,licenses/**,readmes/**,**/*.exe,**/test*.py,**/train.py,**/generate_data.py}"
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

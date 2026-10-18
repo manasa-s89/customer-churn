@@ -24,33 +24,30 @@ readmes/
 *.exe
 *.dll
 
-# Duplicate nested API directory (prevents building a second 476MB serverless function)
+# Duplicate nested API directory
 customer churn/api/
 
 # Development & Offline Scripts (not needed by FastAPI runtime)
-customer churn/train.py
-customer churn/generate_data.py
-customer churn/fast_seed.py
-customer churn/seed_customers.py
-customer churn/evaluate_pipeline.py
-customer churn/inspect_db.py
-customer churn/inspect_model.py
-customer churn/check_dates.py
-customer churn/requirements-dev.txt
+**/train.py
+**/generate_data.py
+**/fast_seed.py
+**/seed_customers.py
+**/evaluate_pipeline.py
+**/inspect_db.py
+**/inspect_model.py
+**/check_dates.py
+**/requirements-dev.txt
 
 # Test Suites & Test Runners
-customer churn/run_all_tests.py
-customer churn/run_tests.py
-customer churn/test_api.py
-customer churn/test_api_endpoints.py
-customer churn/test_live_event_demo.py
-customer churn/test_preprocessing.py
-customer churn/test_*.py
+**/run_all_tests.py
+**/run_tests.py
+**/test_*.py
+**/tests/**
 
 # Container & Shell Scripts
-customer churn/Dockerfile
-customer churn/docker-compose.yml
-customer churn/start_app.bat
+**/Dockerfile
+**/docker-compose.yml
+**/start_app.bat
 
 # Version Control & IDE
 .git/
