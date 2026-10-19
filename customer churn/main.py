@@ -1220,7 +1220,9 @@ def get_dashboard():
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return HTMLResponse("<h2>Frontend Dashboard is initializing...</h2>")
-
+@app.get("/")
+def root():
+    return {"status": "ok", "message": "Churn prediction API is running"}
 
 if __name__ == "__main__":
     import uvicorn
