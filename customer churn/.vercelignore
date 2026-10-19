@@ -7,6 +7,8 @@
 venv/
 ENV/
 env/
+**/.venv/
+**/venv/
 
 # Python Cache and Compiled Bytecode
 __pycache__/
@@ -14,14 +16,20 @@ __pycache__/
 *$py.class
 *.so
 .Python
+**/__pycache__/
+**/*.py[cod]
 
 # Large Binaries & Local Utilities
 cloudflared.exe
+**/cloudflared.exe
 *.exe
 *.dll
+**/*.exe
+**/*.dll
 
-# Duplicate nested API directory
-api/
+# Offline datasets
+data/
+**/*.csv
 
 # Offline Training, Evaluation & Inspection Scripts
 train.py
@@ -47,6 +55,10 @@ test_*.py
 Dockerfile
 docker-compose.yml
 start_app.bat
+
+# Node / logs
+**/node_modules/
+**/*.log
 
 # Version Control & IDE
 .git/
