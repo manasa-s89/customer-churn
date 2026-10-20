@@ -21,7 +21,7 @@ from typing import List, Optional, Union, Dict, Any
 import csv
 import io
 
-from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -75,8 +75,40 @@ from recommender import (
 # Initialize database tables
 init_db()
 
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def get_static_dir() -> str:
+    """Resolve the absolute path to the static directory using __file__."""
+    candidates = [
+        os.path.join(MAIN_DIR, "static"),
+        os.path.join(os.path.dirname(MAIN_DIR), "static"),
+        os.path.join(os.getcwd(), "customer churn", "static"),
+        os.path.join(os.getcwd(), "static"),
+    ]
+    for candidate in candidates:
+        if os.path.isdir(candidate) and os.path.exists(os.path.join(candidate, "index.html")):
+            return candidate
+    return os.path.join(MAIN_DIR, "static")
+
+static_dir = get_static_dir()
 os.makedirs(static_dir, exist_ok=True)
+
+def get_index_path() -> str:
+    """Resolve the absolute path to index.html using __file__."""
+    s_dir = get_static_dir()
+    candidate = os.path.join(s_dir, "index.html")
+    if os.path.isfile(candidate):
+        return candidate
+    fallbacks = [
+        os.path.join(MAIN_DIR, "static", "index.html"),
+        os.path.join(os.path.dirname(MAIN_DIR), "static", "index.html"),
+        os.path.join(os.getcwd(), "customer churn", "static", "index.html"),
+        os.path.join(os.getcwd(), "static", "index.html"),
+    ]
+    for fb in fallbacks:
+        if os.path.isfile(fb):
+            return fb
+    return candidate
 
 app = FastAPI(
     title="OTT Streaming Churn Prediction & Retention API",
@@ -98,7 +130,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+@app.middleware("http")
+async def normalize_vercel_paths(request: Request, call_next):
+    """Normalize paths when Vercel rewrites forward with function prefixes."""
+    path = request.scope.get("path", "")
+    for prefix in ("/api/index.py", "/api/index"):
+        if path.startswith(prefix):
+            new_path = path[len(prefix):]
+            request.scope["path"] = new_path if new_path else "/"
+            break
+    return await call_next(request)
+
+app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
 
 # -----------------------------------------------------------------------------
 # Global Explainer / Model Manager
@@ -371,12 +414,15 @@ def health_check(db: Session = Depends(get_db)):
 
 
 @app.get("/", tags=["Dashboard"])
+@app.get("/api", tags=["Dashboard"])
+@app.get("/api/", tags=["Dashboard"])
 def get_root():
     """Serves the interactive frontend web dashboard."""
-    index_path = os.path.join(static_dir, "index.html")
+    index_path = get_index_path()
     if os.path.exists(index_path):
-        return FileResponse(index_path)
+        return FileResponse(index_path, media_type="text/html")
     return {
+        "status": "ok",
         "message": "Welcome to the OTT Video Streaming Churn Intelligence Platform API.",
         "dashboard": "/dashboard",
         "docs": "/docs",
@@ -1214,15 +1260,15 @@ def get_recent_simulated_events():
 
 
 @app.get("/dashboard", tags=["Dashboard"])
+@app.get("/dashboard/", tags=["Dashboard"])
+@app.get("/api/dashboard", tags=["Dashboard"])
+@app.get("/api/dashboard/", tags=["Dashboard"])
 def get_dashboard():
     """Serves the interactive frontend web dashboard."""
-    index_path = os.path.join(static_dir, "index.html")
+    index_path = get_index_path()
     if os.path.exists(index_path):
-        return FileResponse(index_path)
+        return FileResponse(index_path, media_type="text/html")
     return HTMLResponse("<h2>Frontend Dashboard is initializing...</h2>")
-@app.get("/")
-def root():
-    return {"status": "ok", "message": "Churn prediction API is running"}
 
 if __name__ == "__main__":
     import uvicorn

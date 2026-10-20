@@ -1,6 +1,6 @@
 # ==============================================================================
 # Vercel Deployment Ignore Configuration
-# Prevents development artifacts, large binaries, and duplicate functions
+# Prevents development artifacts, large binaries, virtualenvs, and data from bundle
 # ==============================================================================
 
 # Virtual Environments (Local environment is 711+ MB)
@@ -8,6 +8,10 @@
 venv/
 ENV/
 env/
+**/.venv/
+**/venv/
+**/ENV/
+**/env/
 
 # Python Cache and Compiled Bytecode
 __pycache__/
@@ -15,17 +19,29 @@ __pycache__/
 *$py.class
 *.so
 .Python
+**/__pycache__/
+**/*.py[cod]
 
 # Large Binaries & Windows Installers
 cloudflared.exe
+**/cloudflared.exe
 redist/
 licenses/
 readmes/
 *.exe
 *.dll
+**/*.exe
+**/*.dll
 
 # Duplicate nested API directory
 customer churn/api/
+**/api/index.py
+!api/index.py
+
+# Offline datasets & raw data (0.9 MB)
+customer churn/data/
+**/data/*.csv
+**/*.csv
 
 # Development & Offline Scripts (not needed by FastAPI runtime)
 **/train.py
@@ -48,6 +64,11 @@ customer churn/api/
 **/Dockerfile
 **/docker-compose.yml
 **/start_app.bat
+
+# Node / JS modules, logs, and Vercel artifacts
+**/node_modules/
+**/*.log
+.vercel/
 
 # Version Control & IDE
 .git/

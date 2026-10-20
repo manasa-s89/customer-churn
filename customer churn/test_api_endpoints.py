@@ -46,8 +46,20 @@ class TestCustomerChurnAPI(unittest.TestCase):
         self.assertEqual(res_dash.status_code, 200)
         self.assertTrue("ChurnIQ" in res_dash.text or "RetainPulse" in res_dash.text or "<!DOCTYPE html>" in res_dash.text)
 
+        res_dash_slash = self.client.get("/dashboard/")
+        self.assertEqual(res_dash_slash.status_code, 200)
+
+        res_api_dash = self.client.get("/api/dashboard")
+        self.assertEqual(res_api_dash.status_code, 200)
+
         res_root = self.client.get("/")
         self.assertEqual(res_root.status_code, 200)
+
+        res_css = self.client.get("/static/styles.css")
+        self.assertEqual(res_css.status_code, 200)
+
+        res_js = self.client.get("/static/app.js")
+        self.assertEqual(res_js.status_code, 200)
 
     def test_02_predict_high_risk_subscriber(self):
         """Verify single subscriber prediction produces sensible probability and triggers retention rules."""
