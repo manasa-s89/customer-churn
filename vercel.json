@@ -3,7 +3,7 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
-      "includeFiles": "customer churn/{static,models}/**",
+      "includeFiles": "{customer churn/static/**,customer churn/models/**,customer churn/churn.db,static/**,churn.db}",
       "excludeFiles": "{**/.venv/**,**/venv/**,redist/**,licenses/**,readmes/**,**/*.exe,**/*.dll,**/data/*.csv,**/test*.py,**/train.py,**/generate_data.py}"
     }
   },

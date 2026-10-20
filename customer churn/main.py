@@ -126,6 +126,26 @@ async def normalize_vercel_paths(request: Request, call_next):
 
 app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
 
+@app.get("/static/{file_path:path}", include_in_schema=False)
+@app.get("/api/static/{file_path:path}", include_in_schema=False)
+def serve_static_asset(file_path: str):
+    """Serve static CSS, JS, and HTML files with guaranteed MIME types."""
+    candidate_paths = [
+        STATIC_DIR / file_path,
+        BASE_DIR.parent / "static" / file_path,
+        BASE_DIR.parent / "public" / "static" / file_path,
+    ]
+    for p in candidate_paths:
+        if p.is_file():
+            if file_path.endswith(".css"):
+                return FileResponse(str(p), media_type="text/css")
+            elif file_path.endswith(".js"):
+                return FileResponse(str(p), media_type="text/javascript")
+            elif file_path.endswith(".html"):
+                return FileResponse(str(p), media_type="text/html")
+            return FileResponse(str(p))
+    raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
+
 # -----------------------------------------------------------------------------
 # Global Explainer / Model Manager
 # -----------------------------------------------------------------------------

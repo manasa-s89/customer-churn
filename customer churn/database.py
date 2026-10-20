@@ -25,13 +25,14 @@ if not DATABASE_URL:
         # Locate seed churn.db across potential root/subfolder working directories
         candidate_seed_paths = [
             default_db_path,
+            os.path.join(os.path.dirname(db_dir), "churn.db"),
             os.path.join(os.getcwd(), "customer churn", "churn.db"),
             os.path.join(os.getcwd(), "churn.db")
         ]
 
-        if not os.path.exists(tmp_db_path):
+        if not os.path.exists(tmp_db_path) or os.path.getsize(tmp_db_path) == 0:
             for seed_path in candidate_seed_paths:
-                if os.path.exists(seed_path):
+                if os.path.exists(seed_path) and os.path.getsize(seed_path) > 0:
                     try:
                         shutil.copy2(seed_path, tmp_db_path)
                         break
