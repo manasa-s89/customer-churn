@@ -35,8 +35,6 @@ readmes/
 
 # Duplicate nested API directory
 customer churn/api/
-**/api/index.py
-!api/index.py
 
 # Offline datasets & raw data (0.9 MB)
 customer churn/data/

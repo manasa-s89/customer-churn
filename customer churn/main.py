@@ -13,6 +13,7 @@ FastAPI backend providing:
 from fastapi.responses import HTMLResponse
 from datetime import datetime, timezone
 import os
+from pathlib import Path
 import uuid
 import math
 import asyncio
@@ -75,40 +76,22 @@ from recommender import (
 # Initialize database tables
 init_db()
 
-MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
+# -----------------------------------------------------------------------------
+# Static Directory & Asset Resolution (based on __file__, not CWD)
+# -----------------------------------------------------------------------------
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
 
-def get_static_dir() -> str:
-    """Resolve the absolute path to the static directory using __file__."""
-    candidates = [
-        os.path.join(MAIN_DIR, "static"),
-        os.path.join(os.path.dirname(MAIN_DIR), "static"),
-        os.path.join(os.getcwd(), "customer churn", "static"),
-        os.path.join(os.getcwd(), "static"),
-    ]
-    for candidate in candidates:
-        if os.path.isdir(candidate) and os.path.exists(os.path.join(candidate, "index.html")):
-            return candidate
-    return os.path.join(MAIN_DIR, "static")
+# If not present in customer churn/static, check root static as fallback
+if not INDEX_FILE.is_file():
+    root_static = BASE_DIR.parent / "static"
+    if (root_static / "index.html").is_file():
+        STATIC_DIR = root_static
+        INDEX_FILE = STATIC_DIR / "index.html"
 
-static_dir = get_static_dir()
-os.makedirs(static_dir, exist_ok=True)
-
-def get_index_path() -> str:
-    """Resolve the absolute path to index.html using __file__."""
-    s_dir = get_static_dir()
-    candidate = os.path.join(s_dir, "index.html")
-    if os.path.isfile(candidate):
-        return candidate
-    fallbacks = [
-        os.path.join(MAIN_DIR, "static", "index.html"),
-        os.path.join(os.path.dirname(MAIN_DIR), "static", "index.html"),
-        os.path.join(os.getcwd(), "customer churn", "static", "index.html"),
-        os.path.join(os.getcwd(), "static", "index.html"),
-    ]
-    for fb in fallbacks:
-        if os.path.isfile(fb):
-            return fb
-    return candidate
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+static_dir = str(STATIC_DIR)
 
 app = FastAPI(
     title="OTT Streaming Churn Prediction & Retention API",
@@ -418,9 +401,8 @@ def health_check(db: Session = Depends(get_db)):
 @app.get("/api/", tags=["Dashboard"])
 def get_root():
     """Serves the interactive frontend web dashboard."""
-    index_path = get_index_path()
-    if os.path.exists(index_path):
-        return FileResponse(index_path, media_type="text/html")
+    if INDEX_FILE.is_file():
+        return FileResponse(str(INDEX_FILE), media_type="text/html")
     return {
         "status": "ok",
         "message": "Welcome to the OTT Video Streaming Churn Intelligence Platform API.",
@@ -1265,9 +1247,8 @@ def get_recent_simulated_events():
 @app.get("/api/dashboard/", tags=["Dashboard"])
 def get_dashboard():
     """Serves the interactive frontend web dashboard."""
-    index_path = get_index_path()
-    if os.path.exists(index_path):
-        return FileResponse(index_path, media_type="text/html")
+    if INDEX_FILE.is_file():
+        return FileResponse(str(INDEX_FILE), media_type="text/html")
     return HTMLResponse("<h2>Frontend Dashboard is initializing...</h2>")
 
 if __name__ == "__main__":
