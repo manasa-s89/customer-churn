@@ -54,12 +54,33 @@ class TestCustomerChurnAPI(unittest.TestCase):
 
         res_root = self.client.get("/")
         self.assertEqual(res_root.status_code, 200)
+        self.assertIn("text/html", res_root.headers.get("content-type", ""))
 
+        # Test static CSS returns real CSS with text/css (not HTML dashboard)
         res_css = self.client.get("/static/styles.css")
         self.assertEqual(res_css.status_code, 200)
+        self.assertIn("text/css", res_css.headers.get("content-type", ""))
+        self.assertNotIn("<!DOCTYPE html>", res_css.text)
 
+        # Test static JS returns real JS with javascript media type (not HTML dashboard)
         res_js = self.client.get("/static/app.js")
         self.assertEqual(res_js.status_code, 200)
+        self.assertTrue(
+            "text/javascript" in res_js.headers.get("content-type", "")
+            or "application/javascript" in res_js.headers.get("content-type", "")
+        )
+        self.assertNotIn("<!DOCTYPE html>", res_js.text)
+
+        # Test simulated Vercel proxy rewrite preserving original path
+        res_v_css = self.client.get("/api/index.py", headers={"x-matched-path": "/static/styles.css"})
+        self.assertEqual(res_v_css.status_code, 200)
+        self.assertIn("text/css", res_v_css.headers.get("content-type", ""))
+        self.assertNotIn("<!DOCTYPE html>", res_v_css.text)
+
+        # Test missing static file returns 404, never fallback to index.html
+        res_404 = self.client.get("/static/non_existent_asset.css")
+        self.assertEqual(res_404.status_code, 404)
+        self.assertNotIn("<!DOCTYPE html>", res_404.text)
 
     def test_02_predict_high_risk_subscriber(self):
         """Verify single subscriber prediction produces sensible probability and triggers retention rules."""

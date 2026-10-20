@@ -115,16 +115,20 @@ app.add_middleware(
 
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
-    """Normalize paths when Vercel rewrites forward with function prefixes."""
-    path = request.scope.get("path", "")
+    """Normalize paths when Vercel rewrites forward with function prefixes or proxy headers."""
+    original_path = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
+    if original_path:
+        path = original_path.split("?")[0]
+    else:
+        path = request.scope.get("path", "")
+
     for prefix in ("/api/index.py", "/api/index"):
         if path.startswith(prefix):
-            new_path = path[len(prefix):]
-            request.scope["path"] = new_path if new_path else "/"
+            path = path[len(prefix):]
             break
-    return await call_next(request)
 
-app.mount("/static", StaticFiles(directory=static_dir, html=True), name="static")
+    request.scope["path"] = path if path else "/"
+    return await call_next(request)
 
 @app.get("/static/{file_path:path}", include_in_schema=False)
 @app.get("/api/static/{file_path:path}", include_in_schema=False)
@@ -132,8 +136,14 @@ def serve_static_asset(file_path: str):
     """Serve static CSS, JS, and HTML files with guaranteed MIME types."""
     candidate_paths = [
         STATIC_DIR / file_path,
+        BASE_DIR / "static" / file_path,
+        BASE_DIR / "public" / "static" / file_path,
         BASE_DIR.parent / "static" / file_path,
         BASE_DIR.parent / "public" / "static" / file_path,
+        Path("static") / file_path,
+        Path("public/static") / file_path,
+        Path("customer churn/static") / file_path,
+        Path("customer churn/public/static") / file_path,
     ]
     for p in candidate_paths:
         if p.is_file():
@@ -143,8 +153,18 @@ def serve_static_asset(file_path: str):
                 return FileResponse(str(p), media_type="text/javascript")
             elif file_path.endswith(".html"):
                 return FileResponse(str(p), media_type="text/html")
+            elif file_path.endswith(".json"):
+                return FileResponse(str(p), media_type="application/json")
+            elif file_path.endswith(".svg"):
+                return FileResponse(str(p), media_type="image/svg+xml")
+            elif file_path.endswith(".png"):
+                return FileResponse(str(p), media_type="image/png")
+            elif file_path.endswith(".ico"):
+                return FileResponse(str(p), media_type="image/x-icon")
             return FileResponse(str(p))
     raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
+
+app.mount("/static", StaticFiles(directory=static_dir, html=False), name="static")
 
 # -----------------------------------------------------------------------------
 # Global Explainer / Model Manager
@@ -419,8 +439,16 @@ def health_check(db: Session = Depends(get_db)):
 @app.get("/", tags=["Dashboard"])
 @app.get("/api", tags=["Dashboard"])
 @app.get("/api/", tags=["Dashboard"])
-def get_root():
+def get_root(request: Request):
     """Serves the interactive frontend web dashboard."""
+    # Ensure static asset requests never accidentally receive dashboard HTML fallback
+    req_path = request.scope.get("path", "")
+    if req_path.startswith("/static/"):
+        return serve_static_asset(req_path[len("/static/"):])
+    matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
+    if matched.startswith("/static/"):
+        return serve_static_asset(matched[len("/static/"):])
+
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")
     return {
@@ -1265,8 +1293,15 @@ def get_recent_simulated_events():
 @app.get("/dashboard/", tags=["Dashboard"])
 @app.get("/api/dashboard", tags=["Dashboard"])
 @app.get("/api/dashboard/", tags=["Dashboard"])
-def get_dashboard():
+def get_dashboard(request: Request):
     """Serves the interactive frontend web dashboard."""
+    req_path = request.scope.get("path", "")
+    if req_path.startswith("/static/"):
+        return serve_static_asset(req_path[len("/static/"):])
+    matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
+    if matched.startswith("/static/"):
+        return serve_static_asset(matched[len("/static/"):])
+
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")
     return HTMLResponse("<h2>Frontend Dashboard is initializing...</h2>")
