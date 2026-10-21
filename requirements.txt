@@ -1,9 +1,13 @@
 pandas==3.0.6
 numpy==2.4.6
 scikit-learn==1.9.1
+scipy==1.17.1
+shap==0.51.0
+matplotlib==3.11.2
 joblib==1.6.0
 fastapi==0.143.0
 uvicorn==0.54.0
 pydantic==2.14.0
 sqlalchemy==2.1.4
 python-multipart==0.0.32
+httpx==0.28.1

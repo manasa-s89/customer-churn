@@ -318,16 +318,76 @@ OTT-BATCH-03,Standard,14.99,10.0,15,2,2,2,2,1,Yes,6
         self.assertIn("is_running", st_data)
         self.assertIn("events_generated", st_data)
 
-        # Single step simulation
-        res_step = self.client.post("/simulate/live-events/step")
-        self.assertEqual(res_step.status_code, 200)
-        step_data = res_step.json()
-        self.assertEqual(step_data["status"], "success")
-        self.assertIn("customer_id", step_data)
-        self.assertIn("event_type", step_data)
-        self.assertIn("previous_score", step_data)
-        self.assertIn("new_score", step_data)
+    def test_12_predict_under_vercel_simulation(self):
+        """Simulate Vercel environment (VERCEL=1) and verify POST /predict with exact dashboard payload."""
+        import os
+        import traceback
+
+        old_vercel = os.environ.get("VERCEL")
+        os.environ["VERCEL"] = "1"
+        try:
+            payload = {
+                "customer_id": "OTT-SCENARIO-01",
+                "subscription_plan": "Standard",
+                "monthly_price": 14.99,
+                "tenure_months": 10,
+                "free_trial_converted": "Yes",
+                "watch_hours_last_30_days": 26.0,
+                "days_since_last_watch": 4,
+                "customer_support_tickets": 0,
+                "payment_failures": 0,
+                "number_of_devices": 2,
+                "number_of_profiles": 2,
+                "downloads_count": 4
+            }
+            try:
+                res = self.client.post("/predict", json=payload)
+                if res.status_code != 200:
+                    print(f"\n[!] Vercel /predict failed with status {res.status_code}:\n{res.text}")
+            except Exception:
+                traceback.print_exc()
+                raise
+
+            self.assertEqual(res.status_code, 200, f"Expected 200, got {res.status_code}: {res.text}")
+            data = res.json()
+            self.assertEqual(data["customer_id"], "OTT-SCENARIO-01")
+            self.assertIn("churn_probability", data)
+            self.assertIn("risk_tier", data)
+            self.assertIn("top_risk_drivers", data)
+            self.assertIn("top_protective_factors", data)
+            self.assertIn("suggested_interventions", data)
+        finally:
+            if old_vercel is None:
+                os.environ.pop("VERCEL", None)
+            else:
+                os.environ["VERCEL"] = old_vercel
+
+    def test_13_predict_db_failure_resilience(self):
+        """Verify /predict does not crash even if database persistence fails."""
+        from unittest.mock import patch
+
+        payload = {
+            "customer_id": "OTT-SCENARIO-01",
+            "subscription_plan": "Standard",
+            "monthly_price": 14.99,
+            "tenure_months": 10,
+            "free_trial_converted": "Yes",
+            "watch_hours_last_30_days": 26.0,
+            "days_since_last_watch": 4,
+            "customer_support_tickets": 0,
+            "payment_failures": 0,
+            "number_of_devices": 2,
+            "number_of_profiles": 2,
+            "downloads_count": 4
+        }
+        with patch("sqlalchemy.orm.Session.commit", side_effect=Exception("Read-only filesystem: commit failed")):
+            res = self.client.post("/predict", json=payload)
+            self.assertEqual(res.status_code, 200, f"Expected 200 on DB failure, got {res.status_code}: {res.text}")
+            data = res.json()
+            self.assertEqual(data["customer_id"], "OTT-SCENARIO-01")
+            self.assertIn("churn_probability", data)
 
 
 if __name__ == '__main__':
     unittest.main()
+

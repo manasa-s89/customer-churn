@@ -35,9 +35,19 @@ if not DATABASE_URL:
                 if os.path.exists(seed_path) and os.path.getsize(seed_path) > 0:
                     try:
                         shutil.copy2(seed_path, tmp_db_path)
+                        try:
+                            os.chmod(tmp_db_path, 0o666)
+                        except Exception:
+                            pass
                         break
                     except Exception as e:
                         print(f"[!] Note: Could not copy seed db from {seed_path} to {tmp_db_path}: {e}")
+
+        if os.path.exists(tmp_db_path):
+            try:
+                os.chmod(tmp_db_path, 0o666)
+            except Exception:
+                pass
 
         # Format URL with forward slashes for cross-platform SQLite URL compatibility
         clean_tmp_path = tmp_db_path.replace("\\", "/")
@@ -79,6 +89,9 @@ def get_db():
 
 def init_db():
     """Initialize database tables."""
-    # Import models to ensure they are registered with Base.metadata
-    import models_db  # noqa: F401
-    Base.metadata.create_all(bind=engine)
+    try:
+        # Import models to ensure they are registered with Base.metadata
+        import models_db  # noqa: F401
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"[!] Warning: Database init_db failed: {e}")

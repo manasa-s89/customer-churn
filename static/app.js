@@ -913,6 +913,18 @@ async function handleSinglePredictSubmit(e) {
   e.preventDefault();
 
   const submitBtn = document.getElementById('btn-run-predict');
+  const restoreSubmitBtn = () => {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span>Run Churn Prediction & Playbooks</span>
+      `;
+    }
+  };
+
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Running ML Inference...</span>';
@@ -942,23 +954,31 @@ async function handleSinglePredictSubmit(e) {
 
     if (res.ok) {
       const data = await res.json();
+      restoreSubmitBtn();
       renderPredictResults(data);
     } else {
-      alert('Error running prediction. Please check inputs.');
+      let errMsg = 'Error running prediction. Please check inputs.';
+      try {
+        const errData = await res.json();
+        if (errData && errData.detail) {
+          if (Array.isArray(errData.detail)) {
+            errMsg = errData.detail.map(d => `${d.loc ? d.loc.slice(1).join('.') : 'field'}: ${d.msg}`).join('\n');
+          } else {
+            errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } else if (errData && errData.message) {
+          errMsg = errData.message;
+        }
+      } catch (_) {}
+      restoreSubmitBtn();
+      alert(errMsg);
     }
   } catch (err) {
     console.error('Predict error:', err);
-    alert('Error connecting to backend inference pipeline.');
+    restoreSubmitBtn();
+    alert(`Error connecting to backend inference pipeline: ${err.message || err}`);
   } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        <span>Run Churn Prediction & Playbooks</span>
-      `;
-    }
+    restoreSubmitBtn();
   }
 }
 

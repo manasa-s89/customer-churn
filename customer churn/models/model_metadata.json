@@ -1,6 +1,10 @@
 {
     "domain": "OTT / Video Streaming",
     "champion_model_name": "Logistic Regression",
+    "scikit_learn_version": "1.9.1",
+    "numpy_version": "2.4.6",
+    "pandas_version": "3.0.6",
+    "joblib_version": "1.6.0",
     "test_metrics": {
         "roc_auc": 0.8718498687499674,
         "f1": 0.4323308270676692,

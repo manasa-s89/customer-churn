@@ -321,79 +321,86 @@ def _process_single_prediction(customer: CustomerInput, db: Session) -> PredictR
 
     now = datetime.now(timezone.utc)
 
-    # 3. Persist / Upsert Subscriber Record
-    customer_record = db.query(models_db.CustomerRecord).filter_by(customer_id=cust_id).first()
-    if not customer_record:
-        customer_record = models_db.CustomerRecord(
-            customer_id=cust_id,
-            subscription_plan=cust_dict["subscription_plan"],
-            monthly_price=cust_dict["monthly_price"],
-            watch_hours_last_30_days=cust_dict["watch_hours_last_30_days"],
-            days_since_last_watch=cust_dict["days_since_last_watch"],
-            number_of_devices=cust_dict["number_of_devices"],
-            number_of_profiles=cust_dict["number_of_profiles"],
-            downloads_count=cust_dict["downloads_count"],
-            customer_support_tickets=cust_dict["customer_support_tickets"],
-            payment_failures=cust_dict["payment_failures"],
-            free_trial_converted=cust_dict["free_trial_converted"],
-            tenure_months=cust_dict["tenure_months"],
-            created_at=now,
-        )
-        db.add(customer_record)
-        db.flush()
-    else:
-        customer_record.subscription_plan = cust_dict["subscription_plan"]
-        customer_record.monthly_price = cust_dict["monthly_price"]
-        customer_record.watch_hours_last_30_days = cust_dict["watch_hours_last_30_days"]
-        customer_record.days_since_last_watch = cust_dict["days_since_last_watch"]
-        customer_record.number_of_devices = cust_dict["number_of_devices"]
-        customer_record.number_of_profiles = cust_dict["number_of_profiles"]
-        customer_record.downloads_count = cust_dict["downloads_count"]
-        customer_record.customer_support_tickets = cust_dict["customer_support_tickets"]
-        customer_record.payment_failures = cust_dict["payment_failures"]
-        customer_record.free_trial_converted = cust_dict["free_trial_converted"]
-        customer_record.tenure_months = cust_dict["tenure_months"]
-
-    # 4. Save Historical Churn Score Record
-    import json
-    score_record = models_db.ChurnScoreRecord(
-        customer_id=cust_id,
-        churn_probability=prob,
-        risk_tier=risk_tier,
-        predicted_churn=predicted_churn,
-        top_risk_drivers_json=json.dumps(top_risk_drivers),
-        top_protective_factors_json=json.dumps(top_protective_factors),
-        explanation_summary=strategy_summary or explanation_summary,
-        recommended_action=legacy_action,
-        created_at=now,
-    )
-    db.add(score_record)
-
-    # 5. Automatically create a suggested Pending Intervention if High or Critical risk
-    if risk_tier in ["Critical", "High"] and suggested_actions:
-        primary = suggested_actions[0]
-        existing_pending = db.query(models_db.InterventionRecord).filter_by(
-            customer_id=cust_id,
-            action_type=primary["action_type"],
-            status="Pending"
-        ).first()
-
-        if not existing_pending:
-            new_intervention = models_db.InterventionRecord(
+    # 3. Persist / Upsert Subscriber Record (database write must not crash inference)
+    try:
+        customer_record = db.query(models_db.CustomerRecord).filter_by(customer_id=cust_id).first()
+        if not customer_record:
+            customer_record = models_db.CustomerRecord(
                 customer_id=cust_id,
-                action_type=primary["action_type"],
-                title=primary["title"],
-                description=primary["description"],
-                urgency=primary["urgency"],
-                recommended_channel=primary["recommended_channel"],
-                status="Pending",
-                notes=f"Auto-generated for {risk_tier} risk subscriber ({prob*100:.1f}%)",
-                performed_by="AI Playbook Engine",
+                subscription_plan=cust_dict["subscription_plan"],
+                monthly_price=cust_dict["monthly_price"],
+                watch_hours_last_30_days=cust_dict["watch_hours_last_30_days"],
+                days_since_last_watch=cust_dict["days_since_last_watch"],
+                number_of_devices=cust_dict["number_of_devices"],
+                number_of_profiles=cust_dict["number_of_profiles"],
+                downloads_count=cust_dict["downloads_count"],
+                customer_support_tickets=cust_dict["customer_support_tickets"],
+                payment_failures=cust_dict["payment_failures"],
+                free_trial_converted=cust_dict["free_trial_converted"],
+                tenure_months=cust_dict["tenure_months"],
                 created_at=now,
             )
-            db.add(new_intervention)
+            db.add(customer_record)
+            db.flush()
+        else:
+            customer_record.subscription_plan = cust_dict["subscription_plan"]
+            customer_record.monthly_price = cust_dict["monthly_price"]
+            customer_record.watch_hours_last_30_days = cust_dict["watch_hours_last_30_days"]
+            customer_record.days_since_last_watch = cust_dict["days_since_last_watch"]
+            customer_record.number_of_devices = cust_dict["number_of_devices"]
+            customer_record.number_of_profiles = cust_dict["number_of_profiles"]
+            customer_record.downloads_count = cust_dict["downloads_count"]
+            customer_record.customer_support_tickets = cust_dict["customer_support_tickets"]
+            customer_record.payment_failures = cust_dict["payment_failures"]
+            customer_record.free_trial_converted = cust_dict["free_trial_converted"]
+            customer_record.tenure_months = cust_dict["tenure_months"]
 
-    db.commit()
+        # 4. Save Historical Churn Score Record
+        import json
+        score_record = models_db.ChurnScoreRecord(
+            customer_id=cust_id,
+            churn_probability=prob,
+            risk_tier=risk_tier,
+            predicted_churn=predicted_churn,
+            top_risk_drivers_json=json.dumps(top_risk_drivers),
+            top_protective_factors_json=json.dumps(top_protective_factors),
+            explanation_summary=strategy_summary or explanation_summary,
+            recommended_action=legacy_action,
+            created_at=now,
+        )
+        db.add(score_record)
+
+        # 5. Automatically create a suggested Pending Intervention if High or Critical risk
+        if risk_tier in ["Critical", "High"] and suggested_actions:
+            primary = suggested_actions[0]
+            existing_pending = db.query(models_db.InterventionRecord).filter_by(
+                customer_id=cust_id,
+                action_type=primary["action_type"],
+                status="Pending"
+            ).first()
+
+            if not existing_pending:
+                new_intervention = models_db.InterventionRecord(
+                    customer_id=cust_id,
+                    action_type=primary["action_type"],
+                    title=primary["title"],
+                    description=primary["description"],
+                    urgency=primary["urgency"],
+                    recommended_channel=primary["recommended_channel"],
+                    status="Pending",
+                    notes=f"Auto-generated for {risk_tier} risk subscriber ({prob*100:.1f}%)",
+                    performed_by="AI Playbook Engine",
+                    created_at=now,
+                )
+                db.add(new_intervention)
+
+        db.commit()
+    except Exception as db_err:
+        print(f"[!] Warning: Could not persist prediction records to database: {db_err}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
     return PredictResponse(
         customer_id=cust_id,
@@ -474,13 +481,23 @@ def predict_churn(
     Run churn prediction, explainability (risk drivers), 4-tier risk classification,
     and retention playbooks for single or batch subscribers.
     """
-    if isinstance(payload, list):
-        results = []
-        for cust in payload:
-            results.append(_process_single_prediction(cust, db))
-        return results
-    else:
-        return _process_single_prediction(payload, db)
+    try:
+        if isinstance(payload, list):
+            results = []
+            for cust in payload:
+                results.append(_process_single_prediction(cust, db))
+            return results
+        else:
+            return _process_single_prediction(payload, db)
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Prediction failed: {str(e)}"
+        )
 
 
 @app.get(
