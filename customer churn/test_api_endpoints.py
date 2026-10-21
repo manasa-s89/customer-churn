@@ -388,6 +388,217 @@ OTT-BATCH-03,Standard,14.99,10.0,15,2,2,2,2,1,Yes,6
             self.assertIn("churn_probability", data)
 
 
+    def test_14_all_frontend_endpoints_under_vercel_simulation(self):
+        """
+        Verify all API endpoints called by static/app.js succeed under VERCEL=1 simulation:
+        health, analytics/overview, customers, predict, upload_csv, interventions,
+        simulate/live-events, and events/ingest.
+        """
+        import os
+        old_vercel = os.environ.get("VERCEL")
+        os.environ["VERCEL"] = "1"
+        try:
+            # 1. GET /health
+            res = self.client.get("/health")
+            self.assertEqual(res.status_code, 200)
+
+            # 2. GET /analytics/overview
+            res = self.client.get("/analytics/overview")
+            self.assertEqual(res.status_code, 200)
+
+            # 3. GET /customers
+            res = self.client.get("/customers?limit=5")
+            self.assertEqual(res.status_code, 200)
+
+            # 4. GET /customers/{customer_id}
+            res = self.client.get("/customers/TEST-OTT-CRIT-99")
+            self.assertEqual(res.status_code, 200)
+
+            # 5. POST /predict
+            payload = {
+                "customer_id": "VERCEL-SUITE-01",
+                "subscription_plan": "Standard",
+                "monthly_price": 14.99,
+                "watch_hours_last_30_days": 18.0,
+                "days_since_last_watch": 6,
+                "number_of_devices": 2,
+                "number_of_profiles": 2,
+                "downloads_count": 2,
+                "customer_support_tickets": 1,
+                "payment_failures": 0,
+                "free_trial_converted": "Yes",
+                "tenure_months": 8
+            }
+            res = self.client.post("/predict", json=payload)
+            self.assertEqual(res.status_code, 200)
+
+            # 6. POST /upload_csv
+            csv_content = "customer_id,subscription_plan,monthly_price,watch_hours_last_30_days,days_since_last_watch,number_of_devices,number_of_profiles,downloads_count,customer_support_tickets,payment_failures,free_trial_converted,tenure_months\nUP-V-01,Basic,8.99,10,2,1,1,0,0,0,Yes,5\n"
+            csv_file = io.BytesIO(csv_content.encode("utf-8"))
+            res = self.client.post("/upload_csv", files={"file": ("test_vercel.csv", csv_file, "text/csv")})
+            self.assertEqual(res.status_code, 200)
+
+            # 7. GET /interventions
+            res = self.client.get("/interventions")
+            self.assertEqual(res.status_code, 200)
+
+            # 8. PUT /interventions/{id}
+            ints = res.json()
+            if ints:
+                int_id = ints[0]["id"]
+                res_upd = self.client.put(f"/interventions/{int_id}", json={"status": "Resolved", "notes": "Vercel test verified"})
+                self.assertEqual(res_upd.status_code, 200)
+
+            # 9. POST /intervene
+            int_payload = {
+                "customer_id": "TEST-OTT-CRIT-99",
+                "action_type": "pause_subscription_offer",
+                "title": "Pause Subscription Offer",
+                "description": "Offering temporary pause under Vercel test suite.",
+                "urgency": "High",
+                "recommended_channel": "email",
+                "status": "Sent"
+            }
+            res = self.client.post("/intervene", json=int_payload)
+            self.assertIn(res.status_code, [200, 201])
+
+            # 10. GET /simulate/live-events/status
+            res = self.client.get("/simulate/live-events/status")
+            self.assertEqual(res.status_code, 200)
+
+            # 11. POST /simulate/live-events/start
+            res = self.client.post("/simulate/live-events/start")
+            self.assertEqual(res.status_code, 200)
+
+            # 12. POST /simulate/live-events/stop
+            res = self.client.post("/simulate/live-events/stop")
+            self.assertEqual(res.status_code, 200)
+
+            # 13. POST /simulate/live-events/step
+            res = self.client.post("/simulate/live-events/step")
+            self.assertEqual(res.status_code, 200)
+
+            # 14. POST /events/ingest
+            evt_payload = {
+                "customer_id": "TEST-OTT-CRIT-99",
+                "event_type": "watch_session",
+                "metadata": {"duration_hours": 1.5}
+            }
+            res = self.client.post("/events/ingest", json=evt_payload)
+            self.assertEqual(res.status_code, 200)
+
+            # 15. GET / and GET /dashboard
+            res_root = self.client.get("/")
+            self.assertEqual(res_root.status_code, 200)
+            res_dash = self.client.get("/dashboard")
+            self.assertEqual(res_dash.status_code, 200)
+
+        finally:
+            if old_vercel is None:
+                os.environ.pop("VERCEL", None)
+            else:
+                os.environ["VERCEL"] = old_vercel
+
+    def test_15_docs_redoc_openapi_not_caught_by_dashboard_fallback(self):
+        """
+        Verify /docs, /redoc, and /openapi.json return proper API documentation and schemas
+        and are never caught by the dashboard HTML fallback.
+        """
+        # Direct routes
+        res_docs = self.client.get("/docs")
+        self.assertEqual(res_docs.status_code, 200)
+        self.assertIn("swagger-ui", res_docs.text.lower())
+        self.assertNotIn("sidebar-brand-text", res_docs.text)
+
+        res_redoc = self.client.get("/redoc")
+        self.assertEqual(res_redoc.status_code, 200)
+        self.assertIn("redoc", res_redoc.text.lower())
+        self.assertNotIn("sidebar-brand-text", res_redoc.text)
+
+        res_openapi = self.client.get("/openapi.json")
+        self.assertEqual(res_openapi.status_code, 200)
+        self.assertIn("application/json", res_openapi.headers.get("content-type", ""))
+        openapi_data = res_openapi.json()
+        self.assertIn("openapi", openapi_data)
+        self.assertIn("paths", openapi_data)
+        self.assertIn("/predict", openapi_data["paths"])
+
+        # Simulated Vercel rewrites to api/index.py with x-matched-path
+        res_v_docs = self.client.get("/api/index.py", headers={"x-matched-path": "/docs"})
+        self.assertEqual(res_v_docs.status_code, 200)
+        self.assertIn("swagger-ui", res_v_docs.text.lower())
+        self.assertNotIn("sidebar-brand-text", res_v_docs.text)
+
+        res_v_redoc = self.client.get("/api/index.py", headers={"x-matched-path": "/redoc"})
+        self.assertEqual(res_v_redoc.status_code, 200)
+        self.assertIn("redoc", res_v_redoc.text.lower())
+        self.assertNotIn("sidebar-brand-text", res_v_redoc.text)
+
+        res_v_openapi = self.client.get("/api/index.py", headers={"x-matched-path": "/openapi.json"})
+        self.assertEqual(res_v_openapi.status_code, 200)
+        self.assertIn("application/json", res_v_openapi.headers.get("content-type", ""))
+        self.assertIn("openapi", res_v_openapi.json())
+
+        # /api/docs and /api/redoc aliases
+        res_api_docs = self.client.get("/api/docs")
+        self.assertEqual(res_api_docs.status_code, 200)
+        self.assertIn("swagger-ui", res_api_docs.text.lower())
+
+        res_api_redoc = self.client.get("/api/redoc")
+        self.assertEqual(res_api_redoc.status_code, 200)
+        self.assertIn("redoc", res_api_redoc.text.lower())
+
+        res_api_openapi = self.client.get("/api/openapi.json")
+        self.assertEqual(res_api_openapi.status_code, 200)
+        self.assertIn("openapi", res_api_openapi.json())
+
+    def test_16_clear_json_error_responses(self):
+        """Verify API errors return clear, structured JSON containing error, detail, and message."""
+        # 1. 404 Not Found error
+        res_404 = self.client.get("/customers/NON-EXISTENT-OTT-USER-999")
+        self.assertEqual(res_404.status_code, 404)
+        self.assertIn("application/json", res_404.headers.get("content-type", ""))
+        err_404 = res_404.json()
+        self.assertIn("detail", err_404)
+        self.assertIn("message", err_404)
+        self.assertTrue("not found" in err_404["message"].lower() or "not found" in str(err_404["detail"]).lower())
+
+        # 2. 400 Bad Request error (invalid file upload)
+        bad_file = io.BytesIO(b"random plain text")
+        res_bad = self.client.post("/upload_csv", files={"file": ("malicious.exe", bad_file, "application/octet-stream")})
+        self.assertEqual(res_bad.status_code, 400)
+        self.assertIn("application/json", res_bad.headers.get("content-type", ""))
+        err_bad = res_bad.json()
+        self.assertIn("detail", err_bad)
+        self.assertIn("message", err_bad)
+        self.assertIn(".csv file", err_bad["message"])
+
+        # 3. 422 Validation Error (malformed body)
+        res_422 = self.client.post("/events/ingest", json={"invalid_field": 123})
+        self.assertEqual(res_422.status_code, 422)
+        self.assertIn("application/json", res_422.headers.get("content-type", ""))
+        err_422 = res_422.json()
+        self.assertIn("detail", err_422)
+        self.assertIn("message", err_422)
+        self.assertEqual(err_422["error"], "Validation Error")
+
+    def test_17_database_postgres_and_seed_deduplication(self):
+        """Verify database initialization loads seed data when DB is empty and avoids duplicate rows on re-runs."""
+        from database import _check_and_seed_database, SessionLocal
+        import models_db
+        from sqlalchemy import func
+
+        with SessionLocal() as db:
+            count_before = db.query(func.count(models_db.CustomerRecord.customer_id)).scalar() or 0
+            self.assertGreater(count_before, 0, "Database should have subscribers loaded.")
+
+            # Simulate cold start 2: run _check_and_seed_database again
+            _check_and_seed_database()
+
+            count_after = db.query(func.count(models_db.CustomerRecord.customer_id)).scalar() or 0
+            self.assertEqual(count_after, count_before, "Subsequent cold starts must not duplicate rows in database.")
+
+
 if __name__ == '__main__':
     unittest.main()
 

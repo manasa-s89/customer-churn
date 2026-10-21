@@ -84,10 +84,13 @@ class InterveneRequest(BaseModel):
     """Payload to log and trigger a retention intervention."""
     customer_id: str
     action_type: str
-    title: str
-    description: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    details: Optional[str] = None
     urgency: Optional[str] = "High"
-    recommended_channel: Optional[str] = "email"
+    recommended_channel: Optional[str] = None
+    channel: Optional[str] = None
+    status: Optional[str] = "Sent"
     notes: Optional[str] = None
     performed_by: Optional[str] = "Automated System"
 
@@ -101,6 +104,7 @@ class InterveneResponse(BaseModel):
     description: str
     urgency: str
     recommended_channel: str
+    channel: Optional[str] = None
     status: str
     notes: Optional[str] = None
     performed_by: Optional[str] = None

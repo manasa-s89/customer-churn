@@ -23,9 +23,12 @@ import csv
 import io
 
 from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import desc, func, text
 
@@ -113,6 +116,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Global Clear JSON Exception Handlers
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": "HTTP Error",
+            "status_code": exc.status_code,
+            "detail": exc.detail,
+            "message": detail
+        }
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        field = " -> ".join(str(loc) for loc in err.get("loc", []) if loc != "body")
+        msg = err.get("msg", "Invalid value")
+        errors.append(f"{field}: {msg}" if field else msg)
+    err_str = "; ".join(errors) if errors else "Invalid request payload."
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Validation Error",
+            "status_code": 422,
+            "detail": err_str,
+            "message": err_str,
+            "validation_errors": exc.errors()
+        }
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    traceback.print_exc()
+    msg = str(exc) or "Internal server error"
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Internal Server Error",
+            "status_code": 500,
+            "detail": msg,
+            "message": msg
+        }
+    )
+
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
     """Normalize paths when Vercel rewrites forward with function prefixes or proxy headers."""
@@ -127,8 +178,28 @@ async def normalize_vercel_paths(request: Request, call_next):
             path = path[len(prefix):]
             break
 
+    # Normalize docs and redoc paths if prefixed with /api
+    if path == "/api/docs" or path.startswith("/api/docs/"):
+        path = "/docs"
+    elif path == "/api/redoc" or path.startswith("/api/redoc/"):
+        path = "/redoc"
+    elif path == "/api/openapi.json":
+        path = "/openapi.json"
+
     request.scope["path"] = path if path else "/"
     return await call_next(request)
+
+@app.get("/api/docs", include_in_schema=False)
+def get_api_docs():
+    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
+
+@app.get("/api/redoc", include_in_schema=False)
+def get_api_redoc():
+    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
+
+@app.get("/api/openapi.json", include_in_schema=False)
+def get_api_openapi():
+    return JSONResponse(app.openapi())
 
 @app.get("/static/{file_path:path}", include_in_schema=False)
 @app.get("/api/static/{file_path:path}", include_in_schema=False)
@@ -178,9 +249,22 @@ def get_explainer():
     if _explainer_instance is None:
         try:
             from predict_and_explain import ChurnExplainer
-            models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+            here = os.path.dirname(os.path.abspath(__file__))
+            candidate_dirs = [
+                os.path.join(here, "models"),
+                os.path.join(os.path.dirname(here), "models"),
+                os.path.join(os.getcwd(), "models"),
+                os.path.join(os.getcwd(), "customer churn", "models"),
+            ]
+            models_dir = os.path.join(here, "models")
+            for cd in candidate_dirs:
+                if os.path.isdir(cd) and os.path.exists(os.path.join(cd, "best_model.joblib")):
+                    models_dir = cd
+                    break
             _explainer_instance = ChurnExplainer(models_dir=models_dir)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"[!] ChurnExplainer warning: {e}. Checking if fallback needed.")
             _explainer_instance = None
     return _explainer_instance
@@ -296,6 +380,8 @@ def _process_single_prediction(customer: CustomerInput, db: Session) -> PredictR
             exp_results = explainer.predict_and_explain([cust_dict], top_k_reasons=4)
             res = exp_results[0]
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             print(f"[!] Error in explainer inference: {e}. Using calibrated fallback.")
             res = _fallback_predict(cust_dict)
     else:
@@ -455,6 +541,18 @@ def get_root(request: Request):
     matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
     if matched.startswith("/static/"):
         return serve_static_asset(matched[len("/static/"):])
+
+    # Guard: /docs, /redoc, /openapi.json must NEVER be caught by dashboard HTML fallback
+    for p in (req_path, matched):
+        if p:
+            clean_p = p.split("?")[0].strip()
+            if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
+                if clean_p.startswith("/docs"):
+                    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
+                elif clean_p.startswith("/redoc"):
+                    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
+                elif clean_p.startswith("/openapi.json"):
+                    return JSONResponse(app.openapi())
 
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")
@@ -660,14 +758,19 @@ def create_intervention(
             detail=f"Cannot execute intervention: Subscriber '{payload.customer_id}' does not exist."
         )
 
+    title = payload.title or payload.action_type.replace("_", " ").title()
+    desc = payload.description or payload.details or "Retention intervention recorded."
+    channel = payload.recommended_channel or payload.channel or "email"
+    st = payload.status or "Sent"
+
     intervention = models_db.InterventionRecord(
         customer_id=payload.customer_id,
         action_type=payload.action_type,
-        title=payload.title,
-        description=payload.description,
+        title=title,
+        description=desc,
         urgency=payload.urgency or "High",
-        recommended_channel=payload.recommended_channel or "email",
-        status="Sent",
+        recommended_channel=channel,
+        status=st,
         notes=payload.notes or "Intervention dispatched via automated retention workflow.",
         performed_by=payload.performed_by or "Retention Desk",
         created_at=datetime.now(timezone.utc),
@@ -876,6 +979,51 @@ def update_intervention_status(
     db.refresh(intervention)
 
     return InterveneResponse(**intervention.to_dict())
+
+
+@app.get(
+    "/interventions/{customer_id_or_id}",
+    response_model=Union[List[InterveneResponse], InterveneResponse],
+    tags=["Interventions"]
+)
+def get_interventions_by_customer_or_id(
+    customer_id_or_id: str,
+    db: Session = Depends(get_db)
+):
+    """Retrieve interventions for a customer ID, or a single intervention by integer ID."""
+    if customer_id_or_id.isdigit():
+        int_rec = db.query(models_db.InterventionRecord).filter_by(id=int(customer_id_or_id)).first()
+        if int_rec:
+            return InterveneResponse(**int_rec.to_dict())
+
+    records = db.query(models_db.InterventionRecord).filter_by(customer_id=customer_id_or_id).order_by(desc(models_db.InterventionRecord.created_at)).all()
+    return [InterveneResponse(**r.to_dict()) for r in records]
+
+
+@app.get(
+    "/recommendations/{customer_id}",
+    tags=["Recommendations"]
+)
+def get_customer_recommendations(
+    customer_id: str,
+    db: Session = Depends(get_db)
+):
+    """Rule-based retention suggestions for an existing subscriber."""
+    customer = db.query(models_db.CustomerRecord).filter_by(customer_id=customer_id).first()
+    if not customer:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Subscriber '{customer_id}' not found."
+        )
+    cust_dict = customer.to_dict()
+    latest_score = db.query(models_db.ChurnScoreRecord).filter_by(customer_id=customer_id).order_by(desc(models_db.ChurnScoreRecord.created_at)).first()
+    prob = latest_score.churn_probability if latest_score else 0.5
+    tier = latest_score.risk_tier if latest_score else "Moderate"
+    recs = recommend_interventions(cust_dict, churn_probability=prob, risk_tier=tier)
+    return {
+        "customer_id": customer_id,
+        "recommendations": recs
+    }
 
 
 @app.post(
@@ -1134,7 +1282,16 @@ class LiveEventSimulator:
     def start(self):
         if not self.is_running:
             self.is_running = True
-            self._task = asyncio.create_task(self._run_simulation())
+            try:
+                loop = asyncio.get_running_loop()
+                self._task = loop.create_task(self._run_simulation())
+            except RuntimeError:
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        self._task = loop.create_task(self._run_simulation())
+                except Exception:
+                    pass
 
     def stop(self):
         self.is_running = False
@@ -1260,7 +1417,7 @@ def ingest_customer_event(
     response_model=SimulatorStatusResponse,
     tags=["Real-Time Simulation"]
 )
-def start_live_event_stream():
+async def start_live_event_stream():
     """Starts simulated background stream of realistic random events every 3.5 seconds."""
     simulator_instance.start()
     return simulator_instance.get_status()
@@ -1271,7 +1428,7 @@ def start_live_event_stream():
     response_model=SimulatorStatusResponse,
     tags=["Real-Time Simulation"]
 )
-def stop_live_event_stream():
+async def stop_live_event_stream():
     """Stops the simulated background live event stream."""
     simulator_instance.stop()
     return simulator_instance.get_status()
@@ -1318,6 +1475,18 @@ def get_dashboard(request: Request):
     matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
     if matched.startswith("/static/"):
         return serve_static_asset(matched[len("/static/"):])
+
+    # Guard: /docs, /redoc, /openapi.json must NEVER be caught by dashboard HTML fallback
+    for p in (req_path, matched):
+        if p:
+            clean_p = p.split("?")[0].strip()
+            if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
+                if clean_p.startswith("/docs"):
+                    return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
+                elif clean_p.startswith("/redoc"):
+                    return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
+                elif clean_p.startswith("/openapi.json"):
+                    return JSONResponse(app.openapi())
 
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")

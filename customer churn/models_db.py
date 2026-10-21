@@ -154,6 +154,7 @@ class InterventionRecord(Base):
             "description": self.description,
             "urgency": self.urgency,
             "recommended_channel": self.recommended_channel,
+            "channel": self.recommended_channel,
             "status": self.status,
             "notes": self.notes,
             "performed_by": self.performed_by,
