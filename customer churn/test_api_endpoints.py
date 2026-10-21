@@ -599,6 +599,114 @@ OTT-BATCH-03,Standard,14.99,10.0,15,2,2,2,2,1,Yes,6
             self.assertEqual(count_after, count_before, "Subsequent cold starts must not duplicate rows in database.")
 
 
+    def test_18_vercel_post_predict_and_endpoint_requirements(self):
+        """
+        Verify Vercel environment requirements:
+        1. Exact POST /predict payload with OTT-SCENARIO-01 succeeds (no 405).
+        2. POST /intervene, POST /upload_csv, POST /events/ingest, POST /simulate/live-events/step succeed.
+        3. GET /docs, /redoc, /openapi.json, /dashboard, /static/styles.css, /static/app.js succeed.
+        4. GET /favicon.ico returns 204.
+        5. Vercel rewrite headers (x-forwarded-uri: /predict to /api/index.py) succeed with 200.
+        """
+        import os
+        old_vercel = os.environ.get("VERCEL")
+        os.environ["VERCEL"] = "1"
+        try:
+            # 1. Exact POST /predict
+            payload = {
+                "customer_id": "OTT-SCENARIO-01",
+                "subscription_plan": "Standard",
+                "monthly_price": 14.99,
+                "tenure_months": 10,
+                "free_trial_converted": "Yes",
+                "watch_hours_last_30_days": 26.0,
+                "days_since_last_watch": 4,
+                "customer_support_tickets": 0,
+                "payment_failures": 0,
+                "number_of_devices": 2,
+                "number_of_profiles": 2,
+                "downloads_count": 4
+            }
+            res_pred = self.client.post("/predict", json=payload)
+            self.assertEqual(res_pred.status_code, 200)
+            self.assertEqual(res_pred.json()["customer_id"], "OTT-SCENARIO-01")
+
+            # 2. POST /intervene
+            int_payload = {
+                "customer_id": "OTT-SCENARIO-01",
+                "action_type": "pause_subscription_offer",
+                "title": "Pause Subscription Offer",
+                "description": "Offered 60-day pause instead of cancellation.",
+                "urgency": "High",
+                "recommended_channel": "email",
+                "status": "Sent"
+            }
+            res_int = self.client.post("/intervene", json=int_payload)
+            self.assertEqual(res_int.status_code, 201)
+
+            # 3. POST /upload_csv
+            csv_content = (
+                "customer_id,subscription_plan,monthly_price,watch_hours_last_30_days,"
+                "days_since_last_watch,number_of_devices,number_of_profiles,downloads_count,"
+                "customer_support_tickets,payment_failures,free_trial_converted,tenure_months\n"
+                "OTT-SAMPLE-01,Standard,14.99,22.5,3,2,2,3,0,0,Yes,8\n"
+            )
+            res_csv = self.client.post("/upload_csv", files={"file": ("sample.csv", io.BytesIO(csv_content.encode("utf-8")), "text/csv")})
+            self.assertEqual(res_csv.status_code, 200)
+
+            # 4. POST /events/ingest
+            evt_payload = {
+                "customer_id": "OTT-SCENARIO-01",
+                "event_type": "watch_session",
+                "metadata": {"duration_hours": 2.5}
+            }
+            res_evt = self.client.post("/events/ingest", json=evt_payload)
+            self.assertEqual(res_evt.status_code, 200)
+
+            # 5. POST /simulate/live-events/step
+            res_step = self.client.post("/simulate/live-events/step")
+            self.assertEqual(res_step.status_code, 200)
+
+            # 6. GET /docs, /redoc, /openapi.json, /dashboard, /static/styles.css, /static/app.js
+            res_docs = self.client.get("/docs")
+            self.assertEqual(res_docs.status_code, 200)
+            self.assertIn("swagger-ui", res_docs.text.lower())
+
+            res_redoc = self.client.get("/redoc")
+            self.assertEqual(res_redoc.status_code, 200)
+
+            res_openapi = self.client.get("/openapi.json")
+            self.assertEqual(res_openapi.status_code, 200)
+            self.assertIn("openapi", res_openapi.json())
+
+            res_dash = self.client.get("/dashboard")
+            self.assertEqual(res_dash.status_code, 200)
+
+            res_css = self.client.get("/static/styles.css")
+            self.assertEqual(res_css.status_code, 200)
+            self.assertIn("text/css", res_css.headers.get("content-type", ""))
+
+            res_js = self.client.get("/static/app.js")
+            self.assertEqual(res_js.status_code, 200)
+            self.assertIn("javascript", res_js.headers.get("content-type", ""))
+
+            # 7. GET /favicon.ico returns 204
+            res_fav = self.client.get("/favicon.ico")
+            self.assertEqual(res_fav.status_code, 204)
+
+            # 8. Vercel rewrite simulation: x-forwarded-uri to /api/index.py succeeds with 200
+            res_rw = self.client.post("/api/index.py", headers={"x-forwarded-uri": "/predict"}, json=payload)
+            self.assertEqual(res_rw.status_code, 200)
+            self.assertEqual(res_rw.json()["customer_id"], "OTT-SCENARIO-01")
+
+        finally:
+            if old_vercel is None:
+                os.environ.pop("VERCEL", None)
+            else:
+                os.environ["VERCEL"] = old_vercel
+
+
 if __name__ == '__main__':
     unittest.main()
+
 

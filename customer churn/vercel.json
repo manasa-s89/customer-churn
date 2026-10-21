@@ -3,13 +3,13 @@
   "functions": {
     "api/index.py": {
       "maxDuration": 30,
-      "includeFiles": "{customer churn/static/**,customer churn/models/**,customer churn/churn.db,customer churn/public/**,static/**,public/**,churn.db}",
+      "includeFiles": "{customer churn/static/**,customer churn/models/**,customer churn/churn.db,static/**,churn.db}",
       "excludeFiles": "{**/.venv/**,**/venv/**,redist/**,licenses/**,readmes/**,**/*.exe,**/*.dll,**/data/*.csv,**/test*.py,**/train.py,**/generate_data.py}"
     }
   },
   "rewrites": [
     {
-      "source": "/((?!static|favicon\\.ico).*)",
+      "source": "/(.*)",
       "destination": "/api/index.py"
     }
   ]

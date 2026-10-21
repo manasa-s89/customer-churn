@@ -978,14 +978,14 @@ async function handleSinglePredictSubmit(e) {
       restoreSubmitBtn();
       renderPredictResults(data);
     } else {
-      const errMsg = await parseErrorMessage(res, 'Error running prediction. Please check inputs.');
+      const errMsg = await parseErrorMessage(res, 'Server error occurred during prediction.');
       restoreSubmitBtn();
-      alert(`Prediction Error: ${errMsg}`);
+      alert(errMsg);
     }
   } catch (err) {
     console.error('Predict error:', err);
     restoreSubmitBtn();
-    alert(`Error connecting to backend inference pipeline: ${err.message || err}`);
+    alert(err.message || String(err));
   } finally {
     restoreSubmitBtn();
   }

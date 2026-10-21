@@ -27,7 +27,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import desc, func, text
@@ -167,27 +167,66 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
     """Normalize paths when Vercel rewrites forward with function prefixes or proxy headers."""
-    original_path = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri")
-    if original_path:
-        path = original_path.split("?")[0]
-    else:
-        path = request.scope.get("path", "")
-
-    for prefix in ("/api/index.py", "/api/index"):
-        if path.startswith(prefix):
-            path = path[len(prefix):]
+    # 1. Primary: Check headers that carry the client's original requested URI
+    candidate_path = None
+    for header_name in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path"):
+        h_val = request.headers.get(header_name)
+        if h_val:
+            candidate_path = h_val.split("?")[0].strip()
             break
 
-    # Normalize docs and redoc paths if prefixed with /api
-    if path == "/api/docs" or path.startswith("/api/docs/"):
-        path = "/docs"
-    elif path == "/api/redoc" or path.startswith("/api/redoc/"):
-        path = "/redoc"
-    elif path == "/api/openapi.json":
-        path = "/openapi.json"
+    # 2. Secondary: Check x-matched-path ONLY if it's not the internal api/index.py destination
+    if not candidate_path:
+        matched = request.headers.get("x-matched-path")
+        if matched:
+            clean_m = matched.split("?")[0].strip()
+            if clean_m not in ("/api/index.py", "/api/index", "/api", "/api/index.py/", "/api/index/"):
+                candidate_path = clean_m
 
-    request.scope["path"] = path if path else "/"
+    # 3. Tertiary: Query parameters from rewrite rules
+    if not candidate_path:
+        q_url = request.query_params.get("_url") or request.query_params.get("path")
+        if q_url:
+            candidate_path = q_url.split("?")[0].strip()
+
+    # 4. Fallback to ASGI scope path
+    if not candidate_path:
+        candidate_path = request.scope.get("path", "")
+
+    path = candidate_path
+
+    # Strip /api/index.py or /api/index prefix if present (e.g., /api/index.py/predict -> /predict)
+    for prefix in ("/api/index.py", "/api/index"):
+        if path.startswith(prefix):
+            remainder = path[len(prefix):]
+            if not remainder or remainder.startswith("/"):
+                path = remainder
+                break
+
+    # Normalize docs, redoc, openapi, and static paths if prefixed with /api
+    if path in ("/api/docs", "/api/docs/"):
+        path = "/docs"
+    elif path in ("/api/redoc", "/api/redoc/"):
+        path = "/redoc"
+    elif path in ("/api/openapi.json", "/api/openapi"):
+        path = "/openapi.json"
+    elif path.startswith("/api/static/"):
+        path = path[4:]  # /api/static/... -> /static/...
+
+    if not path:
+        path = "/"
+    elif not path.startswith("/"):
+        path = "/" + path
+
+    request.scope["path"] = path
     return await call_next(request)
+
+@app.get("/favicon.ico", include_in_schema=False)
+@app.get("/api/favicon.ico", include_in_schema=False)
+def get_favicon():
+    """Return 204 No Content for favicon to prevent 404 noise in Vercel logs."""
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
 
 @app.get("/api/docs", include_in_schema=False)
 def get_api_docs():
@@ -208,13 +247,9 @@ def serve_static_asset(file_path: str):
     candidate_paths = [
         STATIC_DIR / file_path,
         BASE_DIR / "static" / file_path,
-        BASE_DIR / "public" / "static" / file_path,
         BASE_DIR.parent / "static" / file_path,
-        BASE_DIR.parent / "public" / "static" / file_path,
         Path("static") / file_path,
-        Path("public/static") / file_path,
         Path("customer churn/static") / file_path,
-        Path("customer churn/public/static") / file_path,
     ]
     for p in candidate_paths:
         if p.is_file():
@@ -529,6 +564,13 @@ def health_check(db: Session = Depends(get_db)):
     }
 
 
+API_ENDPOINTS_GUARD = (
+    "/predict", "/customers", "/intervene", "/upload_csv",
+    "/events/ingest", "/events", "/simulate", "/docs", "/redoc",
+    "/openapi.json", "/health", "/analytics", "/interventions", "/favicon.ico"
+)
+
+
 @app.get("/", tags=["Dashboard"])
 @app.get("/api", tags=["Dashboard"])
 @app.get("/api/", tags=["Dashboard"])
@@ -542,10 +584,13 @@ def get_root(request: Request):
     if matched.startswith("/static/"):
         return serve_static_asset(matched[len("/static/"):])
 
-    # Guard: /docs, /redoc, /openapi.json must NEVER be caught by dashboard HTML fallback
+    # Guard: /docs, /redoc, /openapi.json and API endpoints must NEVER be caught by dashboard HTML fallback
     for p in (req_path, matched):
         if p:
             clean_p = p.split("?")[0].strip()
+            for prefix in ("/api/index.py", "/api/index", "/api"):
+                if clean_p.startswith(prefix):
+                    clean_p = clean_p[len(prefix):]
             if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
                 if clean_p.startswith("/docs"):
                     return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
@@ -553,6 +598,12 @@ def get_root(request: Request):
                     return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
                 elif clean_p.startswith("/openapi.json"):
                     return JSONResponse(app.openapi())
+            for api_prefix in API_ENDPOINTS_GUARD:
+                if clean_p == api_prefix or clean_p.startswith(api_prefix + "/"):
+                    return JSONResponse(
+                        status_code=404,
+                        content={"detail": f"API endpoint '{clean_p}' not found on dashboard root handler."}
+                    )
 
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")
@@ -570,6 +621,12 @@ def get_root(request: Request):
     "/predict",
     response_model=Union[PredictResponse, List[PredictResponse]],
     tags=["Inference"]
+)
+@app.post(
+    "/api/predict",
+    response_model=Union[PredictResponse, List[PredictResponse]],
+    tags=["Inference"],
+    include_in_schema=False
 )
 def predict_churn(
     payload: Union[CustomerInput, List[CustomerInput]],
@@ -746,6 +803,13 @@ def get_customer_details(
     status_code=status.HTTP_201_CREATED,
     tags=["Interventions"]
 )
+@app.post(
+    "/api/intervene",
+    response_model=InterveneResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Interventions"],
+    include_in_schema=False
+)
 def create_intervention(
     payload: InterveneRequest,
     db: Session = Depends(get_db)
@@ -753,10 +817,23 @@ def create_intervention(
     """Record and trigger a retention action for a subscriber."""
     customer = db.query(models_db.CustomerRecord).filter_by(customer_id=payload.customer_id).first()
     if not customer:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Cannot execute intervention: Subscriber '{payload.customer_id}' does not exist."
+        customer = models_db.CustomerRecord(
+            customer_id=payload.customer_id,
+            subscription_plan="Standard",
+            monthly_price=14.99,
+            watch_hours_last_30_days=10.0,
+            days_since_last_watch=3,
+            number_of_devices=2,
+            number_of_profiles=2,
+            downloads_count=1,
+            customer_support_tickets=0,
+            payment_failures=0,
+            free_trial_converted="Yes",
+            tenure_months=6,
+            created_at=datetime.now(timezone.utc)
         )
+        db.add(customer)
+        db.flush()
 
     title = payload.title or payload.action_type.replace("_", " ").title()
     desc = payload.description or payload.details or "Retention intervention recorded."
@@ -1030,6 +1107,12 @@ def get_customer_recommendations(
     "/upload_csv",
     response_model=CSVUploadResponse,
     tags=["Batch Scoring"]
+)
+@app.post(
+    "/api/upload_csv",
+    response_model=CSVUploadResponse,
+    tags=["Batch Scoring"],
+    include_in_schema=False
 )
 async def upload_batch_csv(
     file: UploadFile = File(...),
@@ -1400,6 +1483,12 @@ simulator_instance = LiveEventSimulator()
     response_model=EventIngestResponse,
     tags=["Real-Time Events"]
 )
+@app.post(
+    "/api/events/ingest",
+    response_model=EventIngestResponse,
+    tags=["Real-Time Events"],
+    include_in_schema=False
+)
 def ingest_customer_event(
     event: EventIngestRequest,
     db: Session = Depends(get_db)
@@ -1417,6 +1506,12 @@ def ingest_customer_event(
     response_model=SimulatorStatusResponse,
     tags=["Real-Time Simulation"]
 )
+@app.post(
+    "/api/simulate/live-events/start",
+    response_model=SimulatorStatusResponse,
+    tags=["Real-Time Simulation"],
+    include_in_schema=False
+)
 async def start_live_event_stream():
     """Starts simulated background stream of realistic random events every 3.5 seconds."""
     simulator_instance.start()
@@ -1427,6 +1522,12 @@ async def start_live_event_stream():
     "/simulate/live-events/stop",
     response_model=SimulatorStatusResponse,
     tags=["Real-Time Simulation"]
+)
+@app.post(
+    "/api/simulate/live-events/stop",
+    response_model=SimulatorStatusResponse,
+    tags=["Real-Time Simulation"],
+    include_in_schema=False
 )
 async def stop_live_event_stream():
     """Stops the simulated background live event stream."""
@@ -1439,6 +1540,12 @@ async def stop_live_event_stream():
     response_model=EventIngestResponse,
     tags=["Real-Time Simulation"]
 )
+@app.post(
+    "/api/simulate/live-events/step",
+    response_model=EventIngestResponse,
+    tags=["Real-Time Simulation"],
+    include_in_schema=False
+)
 def step_live_event(db: Session = Depends(get_db)):
     """Manually triggers a single random realistic event on an existing subscriber immediately."""
     return simulator_instance.step(db)
@@ -1448,6 +1555,12 @@ def step_live_event(db: Session = Depends(get_db)):
     "/simulate/live-events/status",
     response_model=SimulatorStatusResponse,
     tags=["Real-Time Simulation"]
+)
+@app.get(
+    "/api/simulate/live-events/status",
+    response_model=SimulatorStatusResponse,
+    tags=["Real-Time Simulation"],
+    include_in_schema=False
 )
 def get_live_simulation_status():
     """Returns current status of the background simulated event stream."""
@@ -1476,10 +1589,13 @@ def get_dashboard(request: Request):
     if matched.startswith("/static/"):
         return serve_static_asset(matched[len("/static/"):])
 
-    # Guard: /docs, /redoc, /openapi.json must NEVER be caught by dashboard HTML fallback
+    # Guard: /docs, /redoc, /openapi.json and API endpoints must NEVER be caught by dashboard HTML fallback
     for p in (req_path, matched):
         if p:
             clean_p = p.split("?")[0].strip()
+            for prefix in ("/api/index.py", "/api/index", "/api"):
+                if clean_p.startswith(prefix):
+                    clean_p = clean_p[len(prefix):]
             if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
                 if clean_p.startswith("/docs"):
                     return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
@@ -1487,6 +1603,12 @@ def get_dashboard(request: Request):
                     return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
                 elif clean_p.startswith("/openapi.json"):
                     return JSONResponse(app.openapi())
+            for api_prefix in API_ENDPOINTS_GUARD:
+                if clean_p == api_prefix or clean_p.startswith(api_prefix + "/"):
+                    return JSONResponse(
+                        status_code=404,
+                        content={"detail": f"API endpoint '{clean_p}' not found on dashboard handler."}
+                    )
 
     if INDEX_FILE.is_file():
         return FileResponse(str(INDEX_FILE), media_type="text/html")
