@@ -166,59 +166,46 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.middleware("http")
 async def normalize_vercel_paths(request: Request, call_next):
-    """Normalize paths when Vercel rewrites forward with function prefixes or proxy headers."""
-    # 1. Primary: Check headers that carry the client's original requested URI
-    candidate_path = None
-    for header_name in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path"):
-        h_val = request.headers.get(header_name)
-        if h_val:
-            candidate_path = h_val.split("?")[0].strip()
-            break
+    """
+    Normalize paths when Vercel rewrites forward with function prefixes or proxy headers.
+    - It only changes the path when the request path is '/' or '/api/index.py' (or starts with '/api/index.py/')
+      AND a header carries a different real path. Never use an internal path like /api/index.py as the real path.
+    - It NEVER touches paths starting with /static, /docs, /redoc, /openapi.json, /favicon.ico or any path that is already correct.
+    """
+    current_path = request.scope.get("path", "")
 
-    # 2. Secondary: Check x-matched-path ONLY if it's not the internal api/index.py destination
-    if not candidate_path:
-        matched = request.headers.get("x-matched-path")
-        if matched:
-            clean_m = matched.split("?")[0].strip()
-            if clean_m not in ("/api/index.py", "/api/index", "/api", "/api/index.py/", "/api/index/"):
-                candidate_path = clean_m
+    # Never touch static assets, documentation paths, favicon, or already correct paths
+    if current_path.startswith(("/static", "/docs", "/redoc", "/openapi.json", "/favicon.ico")):
+        return await call_next(request)
 
-    # 3. Tertiary: Query parameters from rewrite rules
-    if not candidate_path:
-        q_url = request.query_params.get("_url") or request.query_params.get("path")
-        if q_url:
-            candidate_path = q_url.split("?")[0].strip()
+    # Only change the path when current_path is "/" or "/api/index.py" or starts with "/api/index.py"
+    if current_path in ("/", "/api/index.py", "/api/index", "/api/index.py/", "/api/index/") or current_path.startswith("/api/index.py/"):
+        real_path = None
+        for h in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path", "x-matched-path"):
+            val = request.headers.get(h)
+            if val:
+                candidate = val.split("?")[0].strip()
+                # Never use an internal path like /api/index.py as the real path
+                if candidate and candidate not in ("/api/index.py", "/api/index", "/api", "/api/index.py/", "/api/index/"):
+                    real_path = candidate
+                    break
 
-    # 4. Fallback to ASGI scope path
-    if not candidate_path:
-        candidate_path = request.scope.get("path", "")
+        if real_path:
+            for prefix in ("/api/index.py", "/api/index"):
+                if real_path.startswith(prefix):
+                    remainder = real_path[len(prefix):]
+                    if not remainder or remainder.startswith("/"):
+                        real_path = remainder
+                        break
+            if real_path and not real_path.startswith("/"):
+                real_path = "/" + real_path
+            request.scope["path"] = real_path or "/"
+        elif current_path.startswith("/api/index.py/"):
+            remainder = current_path[len("/api/index.py"):]
+            request.scope["path"] = remainder if remainder else "/"
+        elif request.method == "GET" and current_path in ("/api/index.py", "/api/index", "/api/index.py/", "/api/index/"):
+            request.scope["path"] = "/"
 
-    path = candidate_path
-
-    # Strip /api/index.py or /api/index prefix if present (e.g., /api/index.py/predict -> /predict)
-    for prefix in ("/api/index.py", "/api/index"):
-        if path.startswith(prefix):
-            remainder = path[len(prefix):]
-            if not remainder or remainder.startswith("/"):
-                path = remainder
-                break
-
-    # Normalize docs, redoc, openapi, and static paths if prefixed with /api
-    if path in ("/api/docs", "/api/docs/"):
-        path = "/docs"
-    elif path in ("/api/redoc", "/api/redoc/"):
-        path = "/redoc"
-    elif path in ("/api/openapi.json", "/api/openapi"):
-        path = "/openapi.json"
-    elif path.startswith("/api/static/"):
-        path = path[4:]  # /api/static/... -> /static/...
-
-    if not path:
-        path = "/"
-    elif not path.startswith("/"):
-        path = "/" + path
-
-    request.scope["path"] = path
     return await call_next(request)
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -247,18 +234,22 @@ def serve_static_asset(file_path: str):
     candidate_paths = [
         STATIC_DIR / file_path,
         BASE_DIR / "static" / file_path,
+        BASE_DIR / "public" / "static" / file_path,
         BASE_DIR.parent / "static" / file_path,
+        BASE_DIR.parent / "public" / "static" / file_path,
         Path("static") / file_path,
+        Path("public/static") / file_path,
         Path("customer churn/static") / file_path,
+        Path("customer churn/public/static") / file_path,
     ]
     for p in candidate_paths:
         if p.is_file():
             if file_path.endswith(".css"):
-                return FileResponse(str(p), media_type="text/css")
+                return FileResponse(str(p), media_type="text/css; charset=utf-8")
             elif file_path.endswith(".js"):
-                return FileResponse(str(p), media_type="text/javascript")
+                return FileResponse(str(p), media_type="text/javascript; charset=utf-8")
             elif file_path.endswith(".html"):
-                return FileResponse(str(p), media_type="text/html")
+                return FileResponse(str(p), media_type="text/html; charset=utf-8")
             elif file_path.endswith(".json"):
                 return FileResponse(str(p), media_type="application/json")
             elif file_path.endswith(".svg"):
@@ -269,6 +260,61 @@ def serve_static_asset(file_path: str):
                 return FileResponse(str(p), media_type="image/x-icon")
             return FileResponse(str(p))
     raise HTTPException(status_code=404, detail=f"Static file '{file_path}' not found")
+
+
+def build_inlined_dashboard_html() -> str:
+    """Build dashboard HTML with styles.css and app.js inlined as a safety net."""
+    html_content = ""
+    for cand in [INDEX_FILE, STATIC_DIR / "index.html", BASE_DIR / "static" / "index.html", BASE_DIR / "public" / "index.html", Path("static/index.html"), Path("public/index.html")]:
+        if cand.is_file():
+            try:
+                html_content = cand.read_text(encoding="utf-8")
+                break
+            except Exception:
+                pass
+
+    css_content = ""
+    for cand in [STATIC_DIR / "styles.css", BASE_DIR / "static" / "styles.css", BASE_DIR / "public" / "static" / "styles.css", Path("static/styles.css"), Path("public/static/styles.css")]:
+        if cand.is_file():
+            try:
+                css_content = cand.read_text(encoding="utf-8")
+                break
+            except Exception:
+                pass
+
+    js_content = ""
+    for cand in [STATIC_DIR / "app.js", BASE_DIR / "static" / "app.js", BASE_DIR / "public" / "static" / "app.js", Path("static/app.js"), Path("public/static/app.js")]:
+        if cand.is_file():
+            try:
+                js_content = cand.read_text(encoding="utf-8")
+                break
+            except Exception:
+                pass
+
+    if not html_content:
+        return "<h2>Frontend Dashboard is initializing...</h2>"
+
+    # Inline styles.css into <head>
+    if css_content:
+        inlined_style = f"\n<style id=\"inlined-styles\">\n{css_content}\n</style>\n"
+        if "</head>" in html_content:
+            html_content = html_content.replace("</head>", f"{inlined_style}</head>", 1)
+        else:
+            html_content = inlined_style + html_content
+
+    # Inline app.js into <body> (replacing external script reference to prevent double execution)
+    if js_content:
+        inlined_script = f"\n<script id=\"inlined-app\">\n{js_content}\n</script>\n"
+        import re
+        if re.search(r'<script\s+src=["\']/?(?:static/)?app\.js["\']\s*></script>', html_content):
+            html_content = re.sub(r'<script\s+src=["\']/?(?:static/)?app\.js["\']\s*></script>', inlined_script, html_content)
+        elif "</body>" in html_content:
+            html_content = html_content.replace("</body>", f"{inlined_script}</body>", 1)
+        else:
+            html_content += inlined_script
+
+    return html_content
+
 
 app.mount("/static", StaticFiles(directory=static_dir, html=False), name="static")
 
@@ -554,11 +600,14 @@ def health_check(db: Session = Depends(get_db)):
     explainer = get_explainer()
     model_status = "model_artifact_ready" if explainer is not None else "using_calibrated_fallback"
 
+    db_type = "postgres" if "postgres" in engine.dialect.name.lower() else "sqlite"
+
     return {
         "status": "healthy",
         "domain": "OTT Video Streaming",
         "risk_tiers": RISK_TIER_ORDER,
         "database": db_status,
+        "database_type": db_type,
         "model_status": model_status,
         "server_time": datetime.now(timezone.utc).isoformat(),
     }
@@ -605,16 +654,7 @@ def get_root(request: Request):
                         content={"detail": f"API endpoint '{clean_p}' not found on dashboard root handler."}
                     )
 
-    if INDEX_FILE.is_file():
-        return FileResponse(str(INDEX_FILE), media_type="text/html")
-    return {
-        "status": "ok",
-        "message": "Welcome to the OTT Video Streaming Churn Intelligence Platform API.",
-        "dashboard": "/dashboard",
-        "docs": "/docs",
-        "analytics": "GET /analytics/overview",
-        "predict": "POST /predict"
-    }
+    return HTMLResponse(content=build_inlined_dashboard_html(), status_code=200)
 
 
 @app.post(
@@ -1610,9 +1650,7 @@ def get_dashboard(request: Request):
                         content={"detail": f"API endpoint '{clean_p}' not found on dashboard handler."}
                     )
 
-    if INDEX_FILE.is_file():
-        return FileResponse(str(INDEX_FILE), media_type="text/html")
-    return HTMLResponse("<h2>Frontend Dashboard is initializing...</h2>")
+    return HTMLResponse(content=build_inlined_dashboard_html(), status_code=200)
 
 if __name__ == "__main__":
     import uvicorn

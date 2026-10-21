@@ -45,15 +45,25 @@ candidate_seed_paths = [
 ]
 
 if DATABASE_URL:
-    # Normalize postgres:// to postgresql:// for SQLAlchemy 1.4/2.0+ compatibility
-    if DATABASE_URL.startswith("postgres://"):
-        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    # Normalize postgres:// and postgresql:// to postgresql+psycopg2:// for psycopg2-binary compatibility
+    clean_url = DATABASE_URL
+    if clean_url.startswith("postgres://"):
+        clean_url = clean_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif clean_url.startswith("postgresql://") and not clean_url.startswith("postgresql+"):
+        clean_url = clean_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    # Ensure sslmode=require for Neon / cloud Postgres
+    if "sslmode=" not in clean_url and "sqlite" not in clean_url:
+        sep = "&" if "?" in clean_url else "?"
+        clean_url = f"{clean_url}{sep}sslmode=require"
+
+    DATABASE_URL = clean_url
 
     engine_kwargs = {
         "echo": False,
         "pool_pre_ping": True,
-        "pool_size": 10,
-        "max_overflow": 20
+        "pool_size": 5,
+        "max_overflow": 10
     }
 else:
     # Local SQLite or Vercel serverless SQLite

@@ -42,25 +42,6 @@ const state = {
 
 const API_BASE = '';
 
-/**
- * Extract clean, human-readable error messages from API JSON responses.
- */
-async function parseErrorMessage(res, defaultMsg = 'An unexpected error occurred.') {
-  try {
-    const errData = await res.json();
-    if (!errData) return defaultMsg;
-    if (typeof errData.message === 'string' && errData.message) return errData.message;
-    if (typeof errData.detail === 'string' && errData.detail) return errData.detail;
-    if (Array.isArray(errData.detail)) {
-      return errData.detail.map(d => `${d.loc ? d.loc.slice(1).join('.') : 'field'}: ${d.msg}`).join('\n');
-    }
-    if (typeof errData.error === 'string' && errData.error) return errData.error;
-    return JSON.stringify(errData);
-  } catch (_) {
-    return defaultMsg;
-  }
-}
-
 // ============================================================================
 // Initialization & Navigation
 // ============================================================================
@@ -740,8 +721,6 @@ async function loadCustomers() {
       applyRecentFilters();
       applyFiltersAndSort();
     } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to retrieve subscriber directory.');
-      console.warn('Subscribers directory error:', errMsg);
       useFallbackCustomers();
     }
   } catch (err) {
@@ -934,18 +913,6 @@ async function handleSinglePredictSubmit(e) {
   e.preventDefault();
 
   const submitBtn = document.getElementById('btn-run-predict');
-  const restoreSubmitBtn = () => {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        <span>Run Churn Prediction & Playbooks</span>
-      `;
-    }
-  };
-
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Running ML Inference...</span>';
@@ -975,19 +942,23 @@ async function handleSinglePredictSubmit(e) {
 
     if (res.ok) {
       const data = await res.json();
-      restoreSubmitBtn();
       renderPredictResults(data);
     } else {
-      const errMsg = await parseErrorMessage(res, 'Server error occurred during prediction.');
-      restoreSubmitBtn();
-      alert(errMsg);
+      alert('Error running prediction. Please check inputs.');
     }
   } catch (err) {
     console.error('Predict error:', err);
-    restoreSubmitBtn();
-    alert(err.message || String(err));
+    alert('Error connecting to backend inference pipeline.');
   } finally {
-    restoreSubmitBtn();
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span>Run Churn Prediction & Playbooks</span>
+      `;
+    }
   }
 }
 
@@ -1181,8 +1152,7 @@ async function executeBatchUpload() {
       loadCustomers();
       loadOverviewAnalytics();
     } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to process batch CSV. Check file formatting.');
-      alert(`Batch Upload Error: ${errMsg}`);
+      alert('Failed to process batch CSV. Check file formatting.');
     }
   } catch (err) {
     console.error('Batch upload error:', err);
@@ -1247,8 +1217,6 @@ async function loadInterventions() {
       updateInterventionCounts(state.interventions);
       renderInterventionsTable(state.interventions);
     } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to retrieve retention interventions.');
-      console.warn('Interventions directory error:', errMsg);
       useFallbackInterventions();
     }
   } catch (err) {
@@ -1370,13 +1338,9 @@ async function updateInterventionStatus(id, newStatus) {
     });
     if (res.ok) {
       loadInterventions();
-    } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to update status.');
-      alert(`Status Update Error: ${errMsg}`);
     }
   } catch (err) {
     console.error('Failed to update status:', err);
-    alert('Failed to update status: ' + (err.message || err));
   }
 }
 
@@ -1440,12 +1404,12 @@ async function handleLogInterventionSubmit(e) {
       loadInterventions();
       alert(`Intervention successfully logged for subscriber ${custId}!`);
     } else {
-      const errMsg = await parseErrorMessage(res, 'Subscriber may not exist in database.');
-      alert(`Error logging intervention: ${errMsg}`);
+      const err = await res.json();
+      alert(`Error logging intervention: ${err.detail || 'Subscriber may not exist in database.'}`);
     }
   } catch (err) {
     console.error('Intervene error:', err);
-    alert(`Failed to connect to /intervene API endpoint: ${err.message || err}`);
+    alert('Failed to connect to /intervene API endpoint.');
   }
 }
 
@@ -1466,12 +1430,9 @@ async function openCustomerDetail(customerId) {
       const data = await res.json();
       renderCustomerDetailDrawer(data);
     } else {
-      const errMsg = await parseErrorMessage(res, `Subscriber profile '${customerId}' could not be loaded.`);
-      console.warn('Customer detail error:', errMsg);
       renderDetailFallback(customerId);
     }
   } catch (err) {
-    console.warn(`Subscriber profile error for ${customerId}:`, err);
     renderDetailFallback(customerId);
   }
 }
@@ -1839,12 +1800,9 @@ async function toggleLiveSimulation() {
     if (res.ok) {
       const data = await res.json();
       updateSimulatorUI(data.is_running);
-    } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to toggle live simulation.');
-      alert(`Simulator Error: ${errMsg}`);
     }
   } catch (err) {
-    alert('Error toggling live simulator: ' + (err.message || err));
+    alert('Error toggling live simulator: ' + err.message);
   }
 }
 
@@ -1873,13 +1831,9 @@ async function stepLiveEvent() {
       const data = await res.json();
       displaySimulatedEventInTicker(data);
       pollLiveUpdates();
-    } else {
-      const errMsg = await parseErrorMessage(res, 'Failed to trigger sample event.');
-      alert(`Simulation Step Error: ${errMsg}`);
     }
   } catch (err) {
     console.error('Error triggering sample event:', err);
-    alert('Error triggering sample event: ' + (err.message || err));
   } finally {
     if (btn) btn.disabled = false;
   }
