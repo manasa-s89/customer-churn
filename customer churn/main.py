@@ -23,6 +23,7 @@ import csv
 import io
 
 from fastapi import FastAPI, Depends, HTTPException, Query, status, UploadFile, File, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,7 @@ from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import desc, func, text
 
-from database import engine, get_db, init_db, DATABASE_URL
+from database import engine, get_db, init_db, DATABASE_URL, SessionLocal
 import models_db
 from config import (
     calculate_risk_tier,
@@ -174,8 +175,18 @@ async def normalize_vercel_paths(request: Request, call_next):
     """
     current_path = request.scope.get("path", "")
 
-    # Never touch static assets, documentation paths, favicon, or already correct paths
-    if current_path.startswith(("/static", "/docs", "/redoc", "/openapi.json", "/favicon.ico")):
+    # Never touch static assets, documentation paths, favicon, or already correct API paths
+    if current_path.startswith((
+        "/static", "/docs", "/redoc", "/openapi.json", "/favicon.ico",
+        "/health", "/analytics", "/customers", "/predict", "/intervene",
+        "/upload_csv", "/events", "/simulate", "/interventions", "/recommendations"
+    )):
+        return await call_next(request)
+
+    # Strip /api prefix if path starts with /api/ (e.g. /api/health -> /health) but not /api/index
+    if current_path.startswith("/api/") and not current_path.startswith(("/api/index.py", "/api/index")):
+        remainder = current_path[4:]
+        request.scope["path"] = remainder if remainder.startswith("/") else "/" + remainder
         return await call_next(request)
 
     # Only change the path when current_path is "/" or "/api/index.py" or starts with "/api/index.py"
@@ -191,7 +202,7 @@ async def normalize_vercel_paths(request: Request, call_next):
                     break
 
         if real_path:
-            for prefix in ("/api/index.py", "/api/index"):
+            for prefix in ("/api/index.py", "/api/index", "/api"):
                 if real_path.startswith(prefix):
                     remainder = real_path[len(prefix):]
                     if not remainder or remainder.startswith("/"):
@@ -589,6 +600,7 @@ def _process_single_prediction(customer: CustomerInput, db: Session) -> PredictR
 # =============================================================================
 
 @app.get("/health", tags=["Health"])
+@app.get("/api/health", tags=["Health"], include_in_schema=False)
 def health_check(db: Session = Depends(get_db)):
     """Verify backend API health, database connectivity, and model artifact status."""
     db_status = "connected"
@@ -625,21 +637,27 @@ API_ENDPOINTS_GUARD = (
 @app.get("/api/", tags=["Dashboard"])
 def get_root(request: Request):
     """Serves the interactive frontend web dashboard."""
-    # Ensure static asset requests never accidentally receive dashboard HTML fallback
     req_path = request.scope.get("path", "")
     if req_path.startswith("/static/"):
         return serve_static_asset(req_path[len("/static/"):])
-    matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
-    if matched.startswith("/static/"):
-        return serve_static_asset(matched[len("/static/"):])
 
-    # Guard: /docs, /redoc, /openapi.json and API endpoints must NEVER be caught by dashboard HTML fallback
-    for p in (req_path, matched):
+    candidate_paths = [req_path]
+    for h in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path", "x-matched-path"):
+        val = request.headers.get(h)
+        if val:
+            candidate_paths.append(val)
+
+    for p in candidate_paths:
         if p:
             clean_p = p.split("?")[0].strip()
             for prefix in ("/api/index.py", "/api/index", "/api"):
                 if clean_p.startswith(prefix):
                     clean_p = clean_p[len(prefix):]
+            if not clean_p.startswith("/"):
+                clean_p = "/" + clean_p
+
+            if clean_p.startswith("/static/"):
+                return serve_static_asset(clean_p[len("/static/"):])
             if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
                 if clean_p.startswith("/docs"):
                     return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
@@ -647,6 +665,20 @@ def get_root(request: Request):
                     return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
                 elif clean_p.startswith("/openapi.json"):
                     return JSONResponse(app.openapi())
+
+            # Never allow core API endpoints to fall through to dashboard HTML
+            if clean_p == "/health":
+                with SessionLocal() as db_session:
+                    return JSONResponse(content=health_check(db=db_session))
+            if clean_p == "/analytics/overview":
+                with SessionLocal() as db_session:
+                    res = get_analytics_overview(db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
+            if clean_p == "/customers" or clean_p.startswith("/customers"):
+                with SessionLocal() as db_session:
+                    res = list_customers(db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
+
             for api_prefix in API_ENDPOINTS_GUARD:
                 if clean_p == api_prefix or clean_p.startswith(api_prefix + "/"):
                     return JSONResponse(
@@ -699,6 +731,12 @@ def predict_churn(
     "/customers",
     response_model=CustomerListResponse,
     tags=["Subscriber Directory"]
+)
+@app.get(
+    "/api/customers",
+    response_model=CustomerListResponse,
+    tags=["Subscriber Directory"],
+    include_in_schema=False
 )
 def list_customers(
     subscription_plan: Optional[str] = Query(None, description="Filter by plan: 'Basic', 'Standard', 'Premium'"),
@@ -903,6 +941,12 @@ def create_intervention(
     "/analytics/overview",
     response_model=AnalyticsOverviewResponse,
     tags=["Analytics"]
+)
+@app.get(
+    "/api/analytics/overview",
+    response_model=AnalyticsOverviewResponse,
+    tags=["Analytics"],
+    include_in_schema=False
 )
 def get_analytics_overview(db: Session = Depends(get_db)):
     """
@@ -1625,17 +1669,24 @@ def get_dashboard(request: Request):
     req_path = request.scope.get("path", "")
     if req_path.startswith("/static/"):
         return serve_static_asset(req_path[len("/static/"):])
-    matched = request.headers.get("x-matched-path") or request.headers.get("x-forwarded-uri") or ""
-    if matched.startswith("/static/"):
-        return serve_static_asset(matched[len("/static/"):])
 
-    # Guard: /docs, /redoc, /openapi.json and API endpoints must NEVER be caught by dashboard HTML fallback
-    for p in (req_path, matched):
+    candidate_paths = [req_path]
+    for h in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path", "x-matched-path"):
+        val = request.headers.get(h)
+        if val:
+            candidate_paths.append(val)
+
+    for p in candidate_paths:
         if p:
             clean_p = p.split("?")[0].strip()
             for prefix in ("/api/index.py", "/api/index", "/api"):
                 if clean_p.startswith(prefix):
                     clean_p = clean_p[len(prefix):]
+            if not clean_p.startswith("/"):
+                clean_p = "/" + clean_p
+
+            if clean_p.startswith("/static/"):
+                return serve_static_asset(clean_p[len("/static/"):])
             if clean_p in ("/docs", "/redoc", "/openapi.json") or clean_p.startswith(("/docs/", "/redoc/", "/openapi.json")):
                 if clean_p.startswith("/docs"):
                     return get_swagger_ui_html(openapi_url="/openapi.json", title=app.title + " - Swagger UI")
@@ -1643,6 +1694,20 @@ def get_dashboard(request: Request):
                     return get_redoc_html(openapi_url="/openapi.json", title=app.title + " - ReDoc")
                 elif clean_p.startswith("/openapi.json"):
                     return JSONResponse(app.openapi())
+
+            # Never allow core API endpoints to fall through to dashboard HTML
+            if clean_p == "/health":
+                with SessionLocal() as db_session:
+                    return JSONResponse(content=health_check(db=db_session))
+            if clean_p == "/analytics/overview":
+                with SessionLocal() as db_session:
+                    res = get_analytics_overview(db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
+            if clean_p == "/customers" or clean_p.startswith("/customers"):
+                with SessionLocal() as db_session:
+                    res = list_customers(db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
+
             for api_prefix in API_ENDPOINTS_GUARD:
                 if clean_p == api_prefix or clean_p.startswith(api_prefix + "/"):
                     return JSONResponse(
