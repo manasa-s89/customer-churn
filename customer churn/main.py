@@ -681,6 +681,10 @@ def get_root(request: Request):
                 with SessionLocal() as db_session:
                     res = list_customers(db=db_session)
                     return JSONResponse(content=jsonable_encoder(res))
+            if clean_p == "/interventions" or clean_p.startswith("/interventions"):
+                with SessionLocal() as db_session:
+                    res = list_all_interventions(status_filter=None, action_type=None, limit=500, db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
 
             for api_prefix in API_ENDPOINTS_GUARD:
                 if clean_p == api_prefix or clean_p.startswith(api_prefix + "/"):
@@ -1104,6 +1108,12 @@ def get_analytics_overview(db: Session = Depends(get_db)):
     response_model=List[InterveneResponse],
     tags=["Interventions"]
 )
+@app.get(
+    "/api/interventions",
+    response_model=List[InterveneResponse],
+    tags=["Interventions"],
+    include_in_schema=False
+)
 def list_all_interventions(
     status_filter: Optional[str] = Query(None, alias="status", description="Filter by status"),
     action_type: Optional[str] = Query(None, description="Filter by action type"),
@@ -1112,12 +1122,13 @@ def list_all_interventions(
 ):
     """Retrieve audit log of all triggered retention interventions."""
     query = db.query(models_db.InterventionRecord)
-    if status_filter:
+    if status_filter and isinstance(status_filter, str):
         query = query.filter(models_db.InterventionRecord.status.ilike(status_filter.strip()))
-    if action_type:
+    if action_type and isinstance(action_type, str):
         query = query.filter(models_db.InterventionRecord.action_type.ilike(action_type.strip()))
 
-    records = query.order_by(desc(models_db.InterventionRecord.created_at)).limit(limit).all()
+    safe_limit = limit if isinstance(limit, int) else 100
+    records = query.order_by(desc(models_db.InterventionRecord.created_at)).limit(safe_limit).all()
     return [InterveneResponse(**r.to_dict()) for r in records]
 
 
@@ -1715,6 +1726,10 @@ def get_dashboard(request: Request):
             if clean_p == "/customers" or clean_p.startswith("/customers"):
                 with SessionLocal() as db_session:
                     res = list_customers(db=db_session)
+                    return JSONResponse(content=jsonable_encoder(res))
+            if clean_p == "/interventions" or clean_p.startswith("/interventions"):
+                with SessionLocal() as db_session:
+                    res = list_all_interventions(status_filter=None, action_type=None, limit=500, db=db_session)
                     return JSONResponse(content=jsonable_encoder(res))
 
             for api_prefix in API_ENDPOINTS_GUARD:

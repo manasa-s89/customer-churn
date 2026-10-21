@@ -12,6 +12,10 @@ Verifies:
 - Batch CSV upload and cohort scoring for OTT subscribers
 """
 
+import os
+os.environ["TESTING"] = "1"
+os.environ.pop("DATABASE_URL", None)
+
 import io
 import unittest
 from fastapi.testclient import TestClient

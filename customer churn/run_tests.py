@@ -2,6 +2,9 @@ import sys
 import os
 import io
 
+os.environ["TESTING"] = "1"
+os.environ.pop("DATABASE_URL", None)
+
 print("[1/7] Initializing TestClient with FastAPI app...", flush=True)
 from fastapi.testclient import TestClient
 from main import app

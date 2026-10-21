@@ -6,6 +6,10 @@ Executes:
 Generates comprehensive execution summary.
 """
 
+import os
+os.environ["TESTING"] = "1"
+os.environ.pop("DATABASE_URL", None)
+
 import sys
 import time
 import unittest

@@ -10,6 +10,10 @@ Comprehensive test suite for Customer Churn FastAPI Backend:
 8. Dynamic Rule-Based Recommendations (/recommendations/{id})
 """
 
+import os
+os.environ["TESTING"] = "1"
+os.environ.pop("DATABASE_URL", None)
+
 import sys
 import unittest
 from datetime import datetime

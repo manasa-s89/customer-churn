@@ -10,26 +10,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
-# Load environment variables from .env file if present next to main.py / database.py
-_env_files = [
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
-    os.path.join(os.getcwd(), ".env"),
-    os.path.join(os.getcwd(), "customer churn", ".env")
-]
-for _env_file in _env_files:
-    if os.path.isfile(_env_file):
-        try:
-            with open(_env_file, "r", encoding="utf-8") as _f:
-                for _line in _f:
-                    _line = _line.strip()
-                    if _line and not _line.startswith("#") and "=" in _line:
-                        _k, _v = _line.split("=", 1)
-                        _k, _v = _k.strip(), _v.strip().strip("'\"")
-                        if _k and _k not in os.environ and _v:
-                            os.environ[_k] = _v
-        except Exception:
-            pass
-        break
+# Load environment variables from .env file if present next to main.py / database.py (only if not in testing mode)
+if os.getenv("TESTING") != "1":
+    _env_files = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(os.getcwd(), "customer churn", ".env")
+    ]
+    for _env_file in _env_files:
+        if os.path.isfile(_env_file):
+            try:
+                with open(_env_file, "r", encoding="utf-8") as _f:
+                    for _line in _f:
+                        _line = _line.strip()
+                        if _line and not _line.startswith("#") and "=" in _line:
+                            _k, _v = _line.split("=", 1)
+                            _k, _v = _k.strip(), _v.strip().strip("'\"")
+                            if _k and _k not in os.environ and _v:
+                                os.environ[_k] = _v
+            except Exception:
+                pass
+            break
 
 # Default to local SQLite database, or use PostgreSQL if DATABASE_URL is set
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -44,7 +45,29 @@ candidate_seed_paths = [
     os.path.join(os.getcwd(), "churn.db")
 ]
 
-if DATABASE_URL:
+# Strict test isolation: tests must NEVER write to production Neon PostgreSQL
+if os.getenv("TESTING") == "1":
+    tmp_dir = tempfile.gettempdir()
+    tmp_test_db = os.path.join(tmp_dir, "test_churn.db")
+    for seed_path in candidate_seed_paths:
+        if os.path.exists(seed_path) and os.path.getsize(seed_path) > 0:
+            try:
+                shutil.copy2(seed_path, tmp_test_db)
+                try:
+                    os.chmod(tmp_test_db, 0o666)
+                except Exception:
+                    pass
+                break
+            except Exception:
+                pass
+    clean_test_path = tmp_test_db.replace("\\", "/")
+    DATABASE_URL = f"sqlite:///{clean_test_path}"
+    engine_kwargs = {
+        "echo": False,
+        "connect_args": {"check_same_thread": False},
+        "poolclass": NullPool
+    }
+elif DATABASE_URL:
     # Normalize postgres:// and postgresql:// to postgresql+psycopg2:// for psycopg2-binary compatibility
     clean_url = DATABASE_URL
     if clean_url.startswith("postgres://"):
@@ -63,7 +86,8 @@ if DATABASE_URL:
         "echo": False,
         "pool_pre_ping": True,
         "pool_size": 5,
-        "max_overflow": 10
+        "max_overflow": 10,
+        "connect_args": {"connect_timeout": 15}
     }
 else:
     # Local SQLite or Vercel serverless SQLite
