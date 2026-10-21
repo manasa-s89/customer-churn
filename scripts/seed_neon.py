@@ -15,7 +15,6 @@ import sys
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone
-
 # Add application directory to sys.path
 root_dir = Path(__file__).resolve().parent.parent
 app_dir = root_dir / "customer churn"

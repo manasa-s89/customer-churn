@@ -42,6 +42,25 @@ const state = {
 
 const API_BASE = '';
 
+/**
+ * Extract clean, human-readable error messages from API JSON responses.
+ */
+async function parseErrorMessage(res, defaultMsg = 'An unexpected error occurred.') {
+  try {
+    const errData = await res.json();
+    if (!errData) return defaultMsg;
+    if (typeof errData.message === 'string' && errData.message) return errData.message;
+    if (typeof errData.detail === 'string' && errData.detail) return errData.detail;
+    if (Array.isArray(errData.detail)) {
+      return errData.detail.map(d => `${d.loc ? d.loc.slice(1).join('.') : 'field'}: ${d.msg}`).join('\n');
+    }
+    if (typeof errData.error === 'string' && errData.error) return errData.error;
+    return JSON.stringify(errData);
+  } catch (_) {
+    return defaultMsg;
+  }
+}
+
 // ============================================================================
 // Initialization & Navigation
 // ============================================================================
@@ -913,6 +932,18 @@ async function handleSinglePredictSubmit(e) {
   e.preventDefault();
 
   const submitBtn = document.getElementById('btn-run-predict');
+  const restoreSubmitBtn = () => {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <span>Run Churn Prediction & Playbooks</span>
+      `;
+    }
+  };
+
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Running ML Inference...</span>';
@@ -942,23 +973,19 @@ async function handleSinglePredictSubmit(e) {
 
     if (res.ok) {
       const data = await res.json();
+      restoreSubmitBtn();
       renderPredictResults(data);
     } else {
-      alert('Error running prediction. Please check inputs.');
+      restoreSubmitBtn();
+      const errMsg = await parseErrorMessage(res, 'Server error occurred during prediction.');
+      alert(errMsg);
     }
   } catch (err) {
     console.error('Predict error:', err);
-    alert('Error connecting to backend inference pipeline.');
+    restoreSubmitBtn();
+    alert(err.message || String(err));
   } finally {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        <span>Run Churn Prediction & Playbooks</span>
-      `;
-    }
+    restoreSubmitBtn();
   }
 }
 
