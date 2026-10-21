@@ -73,3 +73,6 @@ customer churn/data/
 .github/
 .vscode/
 .idea/
+.env*
+**/.env*
+

@@ -10,6 +10,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool
 
+# Load environment variables from .env file if present next to main.py / database.py
+_env_files = [
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+    os.path.join(os.getcwd(), ".env"),
+    os.path.join(os.getcwd(), "customer churn", ".env")
+]
+for _env_file in _env_files:
+    if os.path.isfile(_env_file):
+        try:
+            with open(_env_file, "r", encoding="utf-8") as _f:
+                for _line in _f:
+                    _line = _line.strip()
+                    if _line and not _line.startswith("#") and "=" in _line:
+                        _k, _v = _line.split("=", 1)
+                        _k, _v = _k.strip(), _v.strip().strip("'\"")
+                        if _k and _k not in os.environ and _v:
+                            os.environ[_k] = _v
+        except Exception:
+            pass
+        break
+
 # Default to local SQLite database, or use PostgreSQL if DATABASE_URL is set
 DATABASE_URL = os.getenv("DATABASE_URL")
 

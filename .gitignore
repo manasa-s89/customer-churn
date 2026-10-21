@@ -19,9 +19,18 @@ cloudflared.exe
 *.db-wal
 *.db-shm
 
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
 # IDE / OS
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 .vercel/
+
