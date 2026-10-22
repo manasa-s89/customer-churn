@@ -76,8 +76,8 @@ if "sslmode=" not in clean_url and "sqlite" not in clean_url:
 
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-import models_db
-from database import Base
+import models_db  # pyrefly: ignore[missing-import]
+from database import Base  # pyrefly: ignore[missing-import]
 
 print("[*] Connecting to PostgreSQL database...")
 engine = create_engine(
