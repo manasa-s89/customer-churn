@@ -20,10 +20,10 @@ ACTION_STREAMING_CONCIERGE = "streaming_quality_concierge"
 ACTION_VIP_LOYALTY = "vip_early_access_screening"
 
 # Backward-compatibility aliases for tests/older references
-ACTION_PROACTIVE_OUTREACH = ACTION_BILLING_SUPPORT
+ACTION_PROACTIVE_OUTREACH = ACTION_STREAMING_CONCIERGE
 ACTION_CONTRACT_UPGRADE = ACTION_ANNUAL_DISCOUNT
 ACTION_REENGAGEMENT = ACTION_CONTENT_RECOMMENDATION
-ACTION_DISCOUNT_OFFER = ACTION_PAUSE_SUBSCRIPTION
+ACTION_DISCOUNT_OFFER = ACTION_ANNUAL_DISCOUNT
 ACTION_ONBOARDING = ACTION_STREAMING_CONCIERGE
 
 
@@ -47,15 +47,16 @@ def recommend_interventions(
 
     driver_features = [str(d.get("feature", "")).lower() for d in top_risk_drivers]
 
-    # Normalize subscriber inputs
-    plan = str(customer_features.get("subscription_plan", "Basic")).strip().capitalize()
-    monthly_price = float(customer_features.get("monthly_price", 8.99) or 8.99)
+    # Normalize subscriber inputs (support both OTT Streaming and legacy feature names)
+    plan_raw = str(customer_features.get("subscription_plan") or customer_features.get("contract_type") or "Basic").strip()
+    plan = plan_raw.capitalize()
+    monthly_price = float(customer_features.get("monthly_price") or customer_features.get("monthly_charges") or 8.99)
     watch_hours = float(customer_features.get("watch_hours_last_30_days", 0.0) or 0.0)
-    days_since_last_watch = int(customer_features.get("days_since_last_watch", 0) or 0)
-    tickets = int(customer_features.get("customer_support_tickets", 0) or 0)
+    days_since_last_watch = int(customer_features.get("days_since_last_watch") or customer_features.get("last_login_days_ago") or 0)
+    tickets = int(customer_features.get("customer_support_tickets") or customer_features.get("support_tickets") or 0)
     payment_failures = int(customer_features.get("payment_failures", 0) or 0)
     free_trial = str(customer_features.get("free_trial_converted", "Yes")).strip().capitalize()
-    tenure_months = int(customer_features.get("tenure_months", 1) or 1)
+    tenure_months = int(customer_features.get("tenure_months") or customer_features.get("tenure") or 1)
 
     matched_actions: List[Dict[str, Any]] = []
 
@@ -130,9 +131,9 @@ def recommend_interventions(
     # -------------------------------------------------------------------------
     # RULE 4: Price-Sensitive Basic Plan Users -> Annual Plan Switch Loyalty Discount
     # -------------------------------------------------------------------------
-    has_price_driver = any("price" in f or "basic" in f or "plan" in f for f in driver_features)
-    is_basic_sensitive = plan == "Basic" and (churn_probability >= 0.50 or has_price_driver)
-    if is_basic_sensitive or (plan in ["Basic", "Standard"] and monthly_price >= 8.99 and churn_probability >= 0.60):
+    has_price_driver = any("price" in f or "basic" in f or "plan" in f or "charge" in f for f in driver_features)
+    is_basic_sensitive = (plan in ["Basic", "Month-to-month"] or "month" in plan_raw.lower()) and (churn_probability >= 0.50 or has_price_driver)
+    if is_basic_sensitive or (plan in ["Basic", "Standard"] and monthly_price >= 8.99 and churn_probability >= 0.60) or monthly_price >= 50.0:
         matched_actions.append({
             "action_type": ACTION_ANNUAL_DISCOUNT,
             "title": "Annual Plan Switch Loyalty Discount (25% Savings)",

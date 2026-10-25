@@ -4,7 +4,7 @@ Defines data contracts for inference requests, customer directory, interventions
 """
 
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 
 class CustomerInput(BaseModel):
@@ -22,8 +22,57 @@ class CustomerInput(BaseModel):
     free_trial_converted: str = Field("Yes", description="Trial conversion status: 'Yes' or 'No'")
     tenure_months: int = Field(1, ge=0, description="Subscriber tenure with platform in months")
 
-    class Config:
-        json_schema_extra = {
+    @model_validator(mode="before")
+    @classmethod
+    def _map_legacy_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        # 1. customer_id
+        if not d.get("customer_id") and d.get("CustomerID"):
+            d["customer_id"] = str(d["CustomerID"])
+
+        # 2. subscription_plan / contract_type
+        if "subscription_plan" not in d and "contract_type" in d:
+            contract = str(d["contract_type"]).strip().lower()
+            if "two year" in contract:
+                d["subscription_plan"] = "Premium"
+            elif "one year" in contract:
+                d["subscription_plan"] = "Standard"
+            else:
+                d["subscription_plan"] = "Basic"
+
+        # 3. monthly_price / monthly_charges
+        if "monthly_price" not in d and "monthly_charges" in d:
+            d["monthly_price"] = float(d["monthly_charges"])
+
+        # 4. tenure_months / tenure
+        if "tenure_months" not in d and "tenure" in d:
+            d["tenure_months"] = int(d["tenure"])
+
+        # 5. customer_support_tickets / support_tickets
+        if "customer_support_tickets" not in d and "support_tickets" in d:
+            d["customer_support_tickets"] = int(d["support_tickets"])
+
+        # 6. days_since_last_watch / last_login_days_ago
+        if "days_since_last_watch" not in d and "last_login_days_ago" in d:
+            d["days_since_last_watch"] = int(d["last_login_days_ago"])
+
+        # 7. watch_hours_last_30_days / usage_frequency
+        if "watch_hours_last_30_days" not in d and "usage_frequency" in d:
+            freq = str(d["usage_frequency"]).strip().lower()
+            if "daily" in freq:
+                d["watch_hours_last_30_days"] = 60.0
+            elif "weekly" in freq:
+                d["watch_hours_last_30_days"] = 25.0
+            else:
+                d["watch_hours_last_30_days"] = 1.0
+
+        return d
+
+    model_config = ConfigDict(
+        extra="ignore",
+        json_schema_extra={
             "example": {
                 "customer_id": "OTT-78421",
                 "subscription_plan": "Standard",
@@ -39,6 +88,7 @@ class CustomerInput(BaseModel):
                 "tenure_months": 5
             }
         }
+    )
 
 
 class BatchPredictRequest(BaseModel):
