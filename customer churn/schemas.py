@@ -32,15 +32,18 @@ class CustomerInput(BaseModel):
         if not d.get("customer_id") and d.get("CustomerID"):
             d["customer_id"] = str(d["CustomerID"])
 
-        # 2. subscription_plan / contract_type
-        if "subscription_plan" not in d and "contract_type" in d:
-            contract = str(d["contract_type"]).strip().lower()
-            if "two year" in contract:
-                d["subscription_plan"] = "Premium"
-            elif "one year" in contract:
-                d["subscription_plan"] = "Standard"
-            else:
-                d["subscription_plan"] = "Basic"
+        # 2. subscription_plan / contract_type / plan
+        if "subscription_plan" not in d:
+            if "plan" in d:
+                d["subscription_plan"] = str(d["plan"]).strip().capitalize()
+            elif "contract_type" in d:
+                contract = str(d["contract_type"]).strip().lower()
+                if "two year" in contract:
+                    d["subscription_plan"] = "Premium"
+                elif "one year" in contract:
+                    d["subscription_plan"] = "Standard"
+                else:
+                    d["subscription_plan"] = "Basic"
 
         # 3. monthly_price / monthly_charges
         if "monthly_price" not in d and "monthly_charges" in d:
@@ -54,11 +57,18 @@ class CustomerInput(BaseModel):
         if "customer_support_tickets" not in d and "support_tickets" in d:
             d["customer_support_tickets"] = int(d["support_tickets"])
 
-        # 6. days_since_last_watch / last_login_days_ago
-        if "days_since_last_watch" not in d and "last_login_days_ago" in d:
-            d["days_since_last_watch"] = int(d["last_login_days_ago"])
+        # 6. payment_failures / payment_declines
+        if "payment_failures" not in d and "payment_declines" in d:
+            d["payment_failures"] = int(d["payment_declines"])
 
-        # 7. watch_hours_last_30_days / usage_frequency
+        # 7. days_since_last_watch / inactivity_days / last_login_days_ago
+        if "days_since_last_watch" not in d:
+            if "inactivity_days" in d:
+                d["days_since_last_watch"] = int(d["inactivity_days"])
+            elif "last_login_days_ago" in d:
+                d["days_since_last_watch"] = int(d["last_login_days_ago"])
+
+        # 8. watch_hours_last_30_days / usage_frequency
         if "watch_hours_last_30_days" not in d and "usage_frequency" in d:
             freq = str(d["usage_frequency"]).strip().lower()
             if "daily" in freq:

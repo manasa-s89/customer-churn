@@ -1161,6 +1161,9 @@ async function executeBatchUpload() {
   try {
     const res = await fetch(`${API_BASE}/upload_csv`, {
       method: 'POST',
+      headers: {
+        'x-forwarded-uri': '/upload_csv'
+      },
       body: formData
     });
 

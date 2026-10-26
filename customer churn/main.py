@@ -192,7 +192,11 @@ async def normalize_vercel_paths(request: Request, call_next):
     # Only change the path when current_path is "/" or "/api/index.py" or starts with "/api/index.py"
     if current_path in ("/", "/api/index.py", "/api/index", "/api/index.py/", "/api/index/") or current_path.startswith("/api/index.py/"):
         real_path = None
-        for h in ("x-forwarded-uri", "x-original-uri", "x-rewrite-url", "x-vercel-matched-path", "x-matched-path"):
+        for h in (
+            "x-forwarded-uri", "x-original-uri", "x-rewrite-url",
+            "x-invoke-path", "x-vercel-sc-path", "x-url", "x-real-path",
+            "x-vercel-matched-path", "x-matched-path"
+        ):
             val = request.headers.get(h)
             if val:
                 candidate = val.split("?")[0].strip()
@@ -214,6 +218,12 @@ async def normalize_vercel_paths(request: Request, call_next):
         elif current_path.startswith("/api/index.py/"):
             remainder = current_path[len("/api/index.py"):]
             request.scope["path"] = remainder if remainder else "/"
+        elif request.method == "POST" and current_path in ("/api/index.py", "/api/index", "/api/index.py/", "/api/index/"):
+            content_type = request.headers.get("content-type", "").lower()
+            if "multipart/form-data" in content_type:
+                request.scope["path"] = "/upload_csv"
+            else:
+                request.scope["path"] = "/predict"
         elif request.method == "GET" and current_path in ("/api/index.py", "/api/index", "/api/index.py/", "/api/index/"):
             request.scope["path"] = "/"
 
@@ -703,12 +713,6 @@ def get_root(request: Request):
 )
 @app.post(
     "/api/predict",
-    response_model=Union[PredictResponse, List[PredictResponse]],
-    tags=["Inference"],
-    include_in_schema=False
-)
-@app.post(
-    "/api/index.py",
     response_model=Union[PredictResponse, List[PredictResponse]],
     tags=["Inference"],
     include_in_schema=False
@@ -1273,12 +1277,12 @@ async def upload_batch_csv(
         plan = str(norm.get("subscription_plan") or norm.get("plan") or "Basic").strip().capitalize()
         price = safe_float(norm.get("monthly_price") or norm.get("price") or norm.get("monthly_charges"), 8.99)
         watch_hours = safe_float(norm.get("watch_hours_last_30_days") or norm.get("watch_hours"), 15.0)
-        days_inactive = safe_int(norm.get("days_since_last_watch") or norm.get("days_inactive"), 2)
+        days_inactive = safe_int(norm.get("days_since_last_watch") or norm.get("days_inactive") or norm.get("inactivity_days"), 2)
         devices = safe_int(norm.get("number_of_devices") or norm.get("devices"), 1)
         profiles = safe_int(norm.get("number_of_profiles") or norm.get("profiles"), 1)
         downloads = safe_int(norm.get("downloads_count") or norm.get("downloads"), 0)
         tickets = safe_int(norm.get("customer_support_tickets") or norm.get("support_tickets"), 0)
-        failures = safe_int(norm.get("payment_failures") or norm.get("failures"), 0)
+        failures = safe_int(norm.get("payment_failures") or norm.get("failures") or norm.get("payment_declines"), 0)
         trial = str(norm.get("free_trial_converted") or "Yes").strip().capitalize()
         tenure = safe_int(norm.get("tenure_months") or norm.get("tenure"), 3)
 
